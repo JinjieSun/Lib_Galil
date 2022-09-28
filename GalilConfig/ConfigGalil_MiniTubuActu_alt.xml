@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<GalilConfig configID="MiniTubuActu" ipAddr="192.168.1.10">
+  <Channel ChannelID="A" RobotAxisID="alpha1" Unit="deg" UnitToTick="177.1">
+    <PIDParameter Kp="7.63" Ki="0.146" Kd="80.0"></PIDParameter>
+    <DynamicParameter maxSpeed="50000" maxAcc="100000"></DynamicParameter>
+  </Channel>
+  <Channel ChannelID="B" RobotAxisID="alpha2" Unit="deg" UnitToTick="177.1">
+    <PIDParameter Kp="7.63" Ki="0.146" Kd="80.0"></PIDParameter>
+    <DynamicParameter maxSpeed="50000" maxAcc="100000"></DynamicParameter>
+  </Channel>
+  <Channel ChannelID="C" RobotAxisID="alpha3" Unit="deg" UnitToTick="177.1">
+    <PIDParameter Kp="7.63" Ki="0.146" Kd="80.0"></PIDParameter>
+    <DynamicParameter maxSpeed="50000" maxAcc="100000"></DynamicParameter>
+  </Channel>
+  <Channel ChannelID="D" RobotAxisID="beta1" Unit="mm" UnitToTick="42497">>
+    <PIDParameter Kp="7.63" Ki="0.146" Kd="80.0"></PIDParameter>
+    <DynamicParameter maxSpeed="50000" maxAcc="100000"></DynamicParameter>
+  </Channel>
+  <Channel ChannelID="E" RobotAxisID="beta2" Unit="mm" UnitToTick="42497">>
+    <PIDParameter Kp="7.63" Ki="0.146" Kd="80.0"></PIDParameter>
+    <DynamicParameter maxSpeed="50000" maxAcc="100000"></DynamicParameter>
+  </Channel>
+  <Channel ChannelID="F" RobotAxisID="beta3" Unit="mm" UnitToTick="42497">>
+    <PIDParameter Kp="7.63" Ki="0.146" Kd="80.0"></PIDParameter>
+    <DynamicParameter maxSpeed="50000" maxAcc="100000"></DynamicParameter>
+  </Channel>
+</GalilConfig>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<GalilConfig configID="Ernars Robot" ipAddr="192.168.1.10">
+  <Channel ChannelID="B" RobotAxisID="alpha1" Unit="deg" UnitToTick="150">
+    <PIDParameter Kp="40" Ki="0.1" Kd="100.0"></PIDParameter>
+    <DynamicParameter maxSpeed="50000" maxAcc="100000"></DynamicParameter>
+  </Channel>
+  <Channel ChannelID="C" RobotAxisID="alpha2" Unit="deg" UnitToTick="150">
+    <PIDParameter Kp="40" Ki="0.1" Kd="100.0"></PIDParameter>
+    <DynamicParameter maxSpeed="50000" maxAcc="100000"></DynamicParameter>
+  </Channel>
+  <Channel ChannelID="D" RobotAxisID="alpha3" Unit="deg" UnitToTick="150">
+    <PIDParameter Kp="40" Ki="0.1" Kd="100.0"></PIDParameter>
+    <DynamicParameter maxSpeed="50000" maxAcc="100000"></DynamicParameter>
+  </Channel>
+  <Channel ChannelID="E" RobotAxisID="beta1" Unit="mm" UnitToTick="8960">
+    <PIDParameter Kp="55" Ki="0.1" Kd="100.0"></PIDParameter>
+    <DynamicParameter maxSpeed="50000" maxAcc="100000"></DynamicParameter>
+  </Channel>
+  <Channel ChannelID="F" RobotAxisID="beta2" Unit="mm" UnitToTick="8960">
+    <PIDParameter Kp="40" Ki="0.1" Kd="100.0"></PIDParameter>
+    <DynamicParameter maxSpeed="50000" maxAcc="100000"></DynamicParameter>
+  </Channel>
+  <Channel ChannelID="G" RobotAxisID="beta3" Unit="mm" UnitToTick="8960">
+    <PIDParameter Kp="40" Ki="0.1" Kd="100.0"></PIDParameter>
+    <DynamicParameter maxSpeed="50000" maxAcc="100000"></DynamicParameter>
+  </Channel>
+</GalilConfig>
