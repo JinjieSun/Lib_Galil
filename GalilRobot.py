@@ -17,12 +17,14 @@ class RobotAxisID(IntEnum):
 
     (only CTR with three tubes is defined)
     """
+    
+    # Out Tube
     alpha1 = 0
     beta1 = 1
 
     alpha2 = 2
     beta2 = 3
-
+    # Inner Tube
     alpha3 = 4
     beta3 = 5
 
@@ -59,7 +61,7 @@ class GalilRobot:
         self._listUnitToTick = [1] * self._numActuator  # Ticks = joint * _listUnitToTick
 
         # It is assumed that the first channels are for motors.
-        self._numActuatorStr = ''.join(chr(ord('A')+x) for x in xrange(self._numActuator))
+        self._numActuatorStr = ''.join(chr(ord('A')+x) for x in range(self._numActuator))
 
         # Load robot
         self._parse_config_file(xmlpath)
@@ -496,10 +498,10 @@ class GalilRobot:
         self._send_cmd('LM ' + self._numActuatorStr)
         self._send_cmd('CS S')  # Clear Sequence on coordinate S
 
-        for viaPointIdx in xrange(len(axisRelativeDistances)):
+        for viaPointIdx in range(len(axisRelativeDistances)):
             viaPoint = axisRelativeDistances[viaPointIdx]
             viaPointTicks = [0] * self._numActuator
-            for idx in xrange(self._numActuator):
+            for idx in range(self._numActuator):
                 # viaPointTicks is sorted alphabetically (Galil-Channel via self._numActuatorStr[idx])
                 viaPointTicks[idx] = viaPoint[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value] * \
                                      self._listUnitToTick[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value]
@@ -542,7 +544,7 @@ class GalilRobot:
 
         viaPoint = axisRelativeDistances
         viaPointTicks = [0] * self._numActuator
-        for idx in xrange(self._numActuator):
+        for idx in range(self._numActuator):
             # viaPointTicks is sorted alphabetically (Galil-Channel via self._numActuatorStr[idx])
             viaPointTicks[idx] = viaPoint[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value] * \
                                  self._listUnitToTick[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value]
