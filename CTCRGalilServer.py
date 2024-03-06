@@ -20,7 +20,7 @@ def InitRobot():
 
 
 def Connect(rob):
-    host, port = "100.112.77.0", 8190
+    host, port = "100.112.72.122", 8190
     bytes_to_recieve = 53411
 
     # SOCK_STREAM means TCP socket
@@ -45,6 +45,8 @@ def Connect(rob):
     Exit(rob)
 
 
+
+
 def DecodeMessage(data):
     
     delta_q = [0] * 6
@@ -52,13 +54,12 @@ def DecodeMessage(data):
     msg_lst = data.decode().split(" ")
     if (len(msg_lst) != 7):
         print("Incorrect msg received")
-        print(delta_q)
-
     # Update Version     
     elif msg_lst[0] == "spos":
         delta_q = [int(float(num)) for num in msg_lst[1:]]
         print(delta_q)
     return MapToGalil(delta_q)
+
 
 def SendMovementCommand(rob, delta_q):
     if np.sum(delta_q) == 0:
@@ -70,6 +71,9 @@ def SendMovementCommand(rob, delta_q):
     print('-------------- Motion: {} --------------'.format(delta_q))
     #tracker._BEEP(1)
     rob.jointPTPLinearMotionSinglePoint(delta_q, sKurve=True, sKurveValue=0.004)
+    
+    print("'-------------- Current Joint Info --------------")
+    print(rob.getJointPositions())
     # time.sleep(.5)
     return
 

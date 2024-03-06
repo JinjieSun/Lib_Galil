@@ -8,8 +8,13 @@ tracker_exist = False
 n_measurements = 10
 break_time_measurement = 0.1
 
-up_bool = True
+up_bool = False
 in_bool = False
+
+test_rot = True
+
+test_tube_mid = np.array([0, 0, 1, 0, -1, 0])
+test_tube_out = np.array([0, 0, 0, 0, 0, 0])
 
 # -------------- initialization: robot --------------
 if rob_exist:
@@ -42,30 +47,37 @@ if tracker_exist:
     # tracker.portHandles_updateStatusAll()
 
 # -------------- Motion: up --------------
-if in_bool:
-    viaPoints = np.array([
-        [0, 0, 0, -10, 0, -10],
-        [0, 0, 0, 10, 0, 10]
-    ])
-    rob.setMotorConstraints('MaxSpeed', 150000)
-    rob.setMotorConstraints('MaxAcc', 1000000)
-    rob.setMotorConstraints('MaxDec', 1000000)
+# if in_bool:
+#     viaPoints = np.array([
+#         [0, 0, 0, -10, 0, -10],
+#         [0, 0, 0, 10, 0, 10]
+#     ])
+#     rob.setMotorConstraints('MaxSpeed', 150000)
+#     rob.setMotorConstraints('MaxAcc', 1000000)
+#     rob.setMotorConstraints('MaxDec', 1000000)
 
-# -------------- Motion: up --------------
-if up_bool:
-    viaPoints = np.array([
-        [0, 0, 180, 0, 0, 0],
-        [0, 0, -180, 0, -0, 0]
-    ])
+# # -------------- Motion: up --------------
+# if up_bool:
+#     viaPoints = np.array([
+#         [0, 0, 0, 0, 180, 0],
+#         [0, 0, -0, 0, -180, 0]
+#     ])
+#     rob.setMotorConstraints('MaxSpeed', 300000)
+#     rob.setMotorConstraints('MaxAcc', 1000000)
+#     rob.setMotorConstraints('MaxDec', 1000000)
+
+
+if test_rot:
     rob.setMotorConstraints('MaxSpeed', 300000)
     rob.setMotorConstraints('MaxAcc', 1000000)
     rob.setMotorConstraints('MaxDec', 1000000)
-
-if up_bool or in_bool:
     print('-------------- Motion: up/in --------------')
     #tracker._BEEP(1)
-    rob.jointPTPLinearMotionSinglePoint(viaPoints[0], sKurve=True, sKurveValue=0.004)
+    for i in range(360):
+        rob.jointPTPLinearMotionSinglePoint(test_tube_mid, sKurve=True, sKurveValue=0.004)
     time.sleep(.5)
+
+
 
 # -------------- start tracing (Aurora) --------------
 if tracker_exist:
@@ -118,11 +130,11 @@ if tracker_exist:
 #time.sleep(20)
     pass
 # -------------- Motion: down --------------
-if up_bool or in_bool:
-    print('-------------- Motion: down/out --------------')
-    # tracker._BEEP(1)
-    rob.jointPTPLinearMotionSinglePoint(viaPoints[1], sKurve=True, sKurveValue=0.004)
-    time.sleep(.5)
+# if up_bool or in_bool:
+#     print('-------------- Motion: down/out --------------')
+#     # tracker._BEEP(1)
+#     rob.jointPTPLinearMotionSinglePoint(viaPoints[1], sKurve=True, sKurveValue=0.004)
+#     time.sleep(.5)
 
 # -------------- close robot and measurement system --------------
 print('-------------- close robot and measurement system --------------')
