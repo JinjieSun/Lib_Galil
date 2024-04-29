@@ -20,7 +20,7 @@ def InitRobot():
 
 
 def Connect(rob):
-    host, port = "100.112.72.122", 8190
+    host, port = "100.112.72.236", 8190
     bytes_to_recieve = 53411
 
     # SOCK_STREAM means TCP socket
@@ -38,9 +38,10 @@ def Connect(rob):
                 break
             # print(data.decode())
             delta_q = DecodeMessage(data)
-            SendMovementCommand(rob, delta_q)
+            result = SendMovementCommand(rob, delta_q)
             # print(decoded_msg)
-    
+            conn.send(bytes((result,)))
+            
     print("Quit!")               
     Exit(rob)
 
@@ -64,7 +65,7 @@ def DecodeMessage(data):
 def SendMovementCommand(rob, delta_q):
     if np.sum(delta_q) == 0:
         print("No motion")
-        return
+        return False
     rob.setMotorConstraints('MaxSpeed', 150000)
     rob.setMotorConstraints('MaxAcc', 1000000)
     rob.setMotorConstraints('MaxDec', 1000000)
@@ -75,7 +76,7 @@ def SendMovementCommand(rob, delta_q):
     print("'-------------- Current Joint Info --------------")
     print(rob.getJointPositions())
     # time.sleep(.5)
-    return
+    return True
 
 
 def Exit(rob):
@@ -93,11 +94,11 @@ def MapToGalil(delta_q):
     
         |  Tube Num |   Sim   |  Galil 
         |-----------|---------|---------------
-        |   Inner   |    3    |   2 (Mid) 
+        |   Inner   |    3    |   1 (Inner) 
         |-----------|---------|---------------
-        |   Middle  |    2    |   3 (Out)
+        |   Middle  |    2    |   2 (Mid)
         |-----------|---------|---------------
-        |    Out    |    1    |   x (Inner)    
+        |    Out    |    1    |   3 (Out)    
         |-----------|---------|---------------
     """
     galil_q = [0]*6
@@ -106,8 +107,9 @@ def MapToGalil(delta_q):
     # galil_q[1] = 0
     
     # Mid tube in Galil
-    galil_q[2], galil_q[3] = delta_q[4], delta_q[5]
-    galil_q[4], galil_q[5] = delta_q[2], delta_q[3]
+    galil_q[0], galil_q[1] = delta_q[4], delta_q[5]
+    galil_q[2], galil_q[3] = delta_q[2], delta_q[3]
+    galil_q[4], galil_q[5] = delta_q[0], delta_q[1]
     
     return galil_q
 
