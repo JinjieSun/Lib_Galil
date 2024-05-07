@@ -8,7 +8,9 @@ import time
 
 DELTAQ = np.zeros((6,))
 # START_POS = [0, 10, 0, 6, 0, 3]
-START_POS = [0, 40, 0, 32, 0, 20]
+# START_POS = [0, 40, 0, 32, 0, 20]
+# START_POS = [0, 10, 0, 14, 0, 4]
+START_POS = [0, 22, 0, 17, 0, 10]
 
 
 def GoHome(rob, update_Q):
