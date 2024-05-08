@@ -5,12 +5,80 @@ from GalilRobot import GalilRobot
 import numpy as np
 import time
 
-
+Tube_Length = [129, 82, 62]
 DELTAQ = np.zeros((6,))
 # START_POS = [0, 10, 0, 6, 0, 3]
 # START_POS = [0, 40, 0, 32, 0, 20]
 # START_POS = [0, 10, 0, 14, 0, 4]
 START_POS = [0, 22, 0, 17, 0, 10]
+
+
+def end_checking(tube_length, update_Q, deltaQ):
+    
+    l3, l2, l1 = tube_length
+    _, b3, _, b2, _, b1 = update_Q
+
+    _, d3, _, d2, _, d1 = deltaQ
+
+
+    t3_end = b3 + d3 - l3
+    t2_end = b2 + d2 - l2
+    t1_end = b1 + d1 - l1
+
+    if (t3_end > t2_end):
+        return False
+    if (t2_end > t1_end):
+        return False
+    if (t1_end > 0):
+        return False
+    return True
+
+
+def frond_checking(tube_length, update_Q, deltaQ):
+
+
+    l3, l2, l1 = tube_length
+    _, b3, _, b2, _, b1 = update_Q
+
+    _, d3, _, d2, _, d1 = deltaQ
+
+    tube3_front = b3 + d3
+    tube2_front = b2 + d2
+    tube1_front = b1 + d1
+    
+    if (tube1_front < 0):
+        return False
+    if (tube1_front > tube2_front):
+        return False
+    if (tube2_front > tube3_front):
+        return False
+    if (tube1_front > tube3_front):
+        return False
+    
+    return True
+
+
+
+def check_for_valid(update_Q, deltaQ):
+
+    l3, l2, l1 = Tube_Length
+    _, b3, _, b2, _, b3 = update_Q
+
+    _, d3, _, d2, _, d1 = deltaQ
+
+    valid_front = frond_checking(Tube_Length, update_Q, deltaQ)
+    valid_back = end_checking(Tube_Length, update_Q, deltaQ)
+    if not valid_front or not valid_back:
+        print("Error Occurs on new update joints!!!")
+        print("Current Delta Q", update_Q)
+        print("Update Joint Values: ", deltaQ)
+        print("Results: ", deltaQ + update_Q)
+        return False
+    return True
+    
+
+
+
 
 
 def GoHome(rob, update_Q):
@@ -95,15 +163,19 @@ def SendMovementCommand(rob, delta_q, update_Q):
         print(delta_q)
         print("No motion")
         return False, update_Q
+    
+    valid_move = check_for_valid(update_Q, delta_q)
+    if not valid_move:
+        print("Invalid Movement: No motion")
+        return False, update_Q 
+    
     rob.setMotorConstraints('MaxSpeed', 150000)
     rob.setMotorConstraints('MaxAcc', 1000000)
     rob.setMotorConstraints('MaxDec', 1000000)
     print('-------------- Motion: {} --------------'.format(delta_q))
-    #tracker._BEEP(1)
-    
-    update_Q += delta_q
+    #tracker._BEEP(1)    
     rob.jointPTPLinearMotionSinglePoint(delta_q, sKurve=True, sKurveValue=0.004)
-    
+    update_Q += delta_q
     print("'-------------- Current Joint Info --------------")
     print(rob.getJointPositions())
     # time.sleep(.5)
