@@ -5,13 +5,25 @@ from GalilRobot import GalilRobot
 import numpy as np
 import time
 
-Tube_Length = [129, 82, 62]
+Tube_Length = [129, 82, 42]
 DELTAQ = np.zeros((6,))
 # START_POS = [0, 10, 0, 6, 0, 3]
-# START_POS = [0, 40, 0, 32, 0, 20]
-# START_POS = [0, 10, 0, 14, 0, 4]
-START_POS = [0, 22, 0, 17, 0, 10]
+# START_POS = [0, 39, 0, 20, 0, 12]
+START_POS = [0, 59, 0, 37, 0, 22]
 
+
+# START_POS = [90, 59, 0, 20, 0, 10]
+
+# START_POS = [0, 0, 0, 0, 0, 0]
+
+"""
+
+
+Galil robot use left-hand, means the positive rotation angle is counter clockwise, 
+where the CTCR Solver is in right-hand. Therefore, for all angular joint values/updates,
+the sign need to be inverted!!!
+
+"""
 
 def end_checking(tube_length, update_Q, deltaQ):
     
@@ -32,7 +44,6 @@ def end_checking(tube_length, update_Q, deltaQ):
     if (t1_end > 0):
         return False
     return True
-
 
 def frond_checking(tube_length, update_Q, deltaQ):
 
@@ -57,8 +68,6 @@ def frond_checking(tube_length, update_Q, deltaQ):
     
     return True
 
-
-
 def check_for_valid(update_Q, deltaQ):
 
     l3, l2, l1 = Tube_Length
@@ -76,11 +85,6 @@ def check_for_valid(update_Q, deltaQ):
         return False
     return True
     
-
-
-
-
-
 def GoHome(rob, update_Q):
     print("Homing the Robot")
     if np.any(update_Q != np.zeros((6,))):
@@ -91,13 +95,15 @@ def GoHome(rob, update_Q):
 def goStartPos(rob, update_Q):
     if np.any(update_Q != np.zeros((6,))):
         update_Q = GoHome(rob, update_Q)
-    print("Moving to Start Position")
-    rob.jointPTPLinearMotionSinglePoint(START_POS, sKurve=True, sKurveValue=0.004)
+    
+    
+    if np.any(START_POS != np.zeros((6,))):
+        print("Moving to Start Position")
+        rob.jointPTPLinearMotionSinglePoint(START_POS, sKurve=True, sKurveValue=0.004)
     update_Q += START_POS
     print("'-------------- Current Joint Info --------------")
     print(rob.getJointPositions())
     return update_Q
-
 
 def InitRobot():
     if ROB_EXIST:
@@ -109,7 +115,6 @@ def InitRobot():
         time.sleep(1)
         rob.printInfo(detailed=True) 
         return rob
-
 
 def Connect(rob):
     
@@ -165,6 +170,7 @@ def SendMovementCommand(rob, delta_q, update_Q):
         return False, update_Q
     
     valid_move = check_for_valid(update_Q, delta_q)
+    valid_move = True
     if not valid_move:
         print("Invalid Movement: No motion")
         return False, update_Q 
@@ -204,6 +210,14 @@ def MapToGalil(delta_q):
         |-----------|---------|---------------
         |    Out    |    1    |   3 (Out)    
         |-----------|---------|---------------
+
+
+    Attension!!!!
+
+    For Galil Robot, the positive rotation indicates the counter clockwise rotation
+
+    Therefore, the rotation sign need to be changed for Galil Robot to move in correct direction!!!!
+
     """
     galil_q = [0]*6
     # Inner tube in Galil  
@@ -211,9 +225,9 @@ def MapToGalil(delta_q):
     # galil_q[1] = 0
     
     # Mid tube in Galil
-    galil_q[0], galil_q[1] = delta_q[4], delta_q[5]
-    galil_q[2], galil_q[3] = delta_q[2], delta_q[3]
-    galil_q[4], galil_q[5] = delta_q[0], delta_q[1]
+    galil_q[0], galil_q[1] = -delta_q[4], delta_q[5]
+    galil_q[2], galil_q[3] = -delta_q[2], delta_q[3]
+    galil_q[4], galil_q[5] = -delta_q[0], delta_q[1]
     
     return galil_q
 
