@@ -28,14 +28,14 @@ the sign need to be inverted!!!
 def end_checking(tube_length, update_Q, deltaQ):
     
     l3, l2, l1 = tube_length
-    _, b3, _, b2, _, b1 = update_Q
+    _, f3, _, f2, _, f1 = update_Q
 
     _, d3, _, d2, _, d1 = deltaQ
 
 
-    t3_end = b3 + d3 - l3
-    t2_end = b2 + d2 - l2
-    t1_end = b1 + d1 - l1
+    t3_end = f3 + d3 - l3
+    t2_end = f2 + d2 - l2
+    t1_end = f1 + d1 - l1
 
     if (t3_end > t2_end):
         return False
@@ -45,17 +45,15 @@ def end_checking(tube_length, update_Q, deltaQ):
         return False
     return True
 
-def frond_checking(tube_length, update_Q, deltaQ):
+def front_checking(tube_length, update_Q, deltaQ):
 
-
-    l3, l2, l1 = tube_length
-    _, b3, _, b2, _, b1 = update_Q
+    _, f3, _, f2, _, f1 = update_Q
 
     _, d3, _, d2, _, d1 = deltaQ
 
-    tube3_front = b3 + d3
-    tube2_front = b2 + d2
-    tube1_front = b1 + d1
+    tube3_front = f3 + d3
+    tube2_front = f2 + d2
+    tube1_front = f1 + d1
     
     if (tube1_front < 0):
         return False
@@ -69,13 +67,7 @@ def frond_checking(tube_length, update_Q, deltaQ):
     return True
 
 def check_for_valid(update_Q, deltaQ):
-
-    l3, l2, l1 = Tube_Length
-    _, b3, _, b2, _, b3 = update_Q
-
-    _, d3, _, d2, _, d1 = deltaQ
-
-    valid_front = frond_checking(Tube_Length, update_Q, deltaQ)
+    valid_front = front_checking(Tube_Length, update_Q, deltaQ)
     valid_back = end_checking(Tube_Length, update_Q, deltaQ)
     if not valid_front or not valid_back:
         print("Error Occurs on new update joints!!!")
@@ -92,18 +84,31 @@ def GoHome(rob, update_Q):
     print("Homing Finished")
     return update_Q - update_Q
 
-def goStartPos(rob, update_Q):
-    if np.any(update_Q != np.zeros((6,))):
-        update_Q = GoHome(rob, update_Q)
-    
-    
-    if np.any(START_POS != np.zeros((6,))):
-        print("Moving to Start Position")
-        rob.jointPTPLinearMotionSinglePoint(START_POS, sKurve=True, sKurveValue=0.004)
-    update_Q += START_POS
+def goStartPos(rob, update_Q, delta_q = None):
+    # if np.any(update_Q != np.zeros((6,))):
+    #     update_Q = GoHome(rob, update_Q)
+    if delta_q == None:
+        delta_q = START_POS - update_Q
+    else:
+        front_valid = check_for_valid(update_Q, delta_q)
+        end_valid = check_for_valid(update_Q, delta_q)
+
+        diff_l2 = np.linalg.norm(np.array(update_Q)  + np.array(delta_q) - np.array(START_POS))
+        if (diff_l2 > 1e-3):
+            print("Invalid go homt joint values, difference: " + str(diff_l2))
+            print("Est result: " + str(np.array(update_Q)  + np.array(delta_q)))
+        elif not (front_valid and end_valid):
+            delta_q = START_POS - update_Q
+
+    result, update_Q = SendMovementCommand(rob, delta_q, update_Q)
+    # if np.any(START_POS != np.zeros((6,))):
+    #     print("Moving to Start Position")
+    #     rob.jointPTPLinearMotionSinglePoint(START_POS, sKurve=True, sKurveValue=0.004)
+    # update_Q += START_POS
     print("'-------------- Current Joint Info --------------")
     print(rob.getJointPositions())
-    return update_Q
+    print()
+    return result, update_Q
 
 def InitRobot():
     if ROB_EXIST:
@@ -131,22 +136,24 @@ def Connect(rob):
     conn, addr = sock.accept()
     with conn:
         print(f"Connected by {addr}")
-        goStartPos(rob, update_Q)
+        result, update_Q = goStartPos(rob, update_Q)
         try:
             while True:
                 data = conn.recv(1024)
                 if not data:
                     break
                 # print(data.decode())
-                delta_q = DecodeMessage(data)
-                result, update_Q = SendMovementCommand(rob, delta_q, update_Q)
+                delta_q, goStart = DecodeMessage(data)
+                if (goStart):
+                    result, update_Q = goStartPos(rob, update_Q, delta_q)
+                else:
+                    result, update_Q = SendMovementCommand(rob, delta_q, update_Q)
                 # print(decoded_msg)
                 conn.send(bytes((result,)))
             print("Quit!")     
         except:
             print("Error Occur During connection")
         Exit(rob, update_Q)
-
 
 def DecodeMessage(data):
     
@@ -155,20 +162,25 @@ def DecodeMessage(data):
     msg_lst = data.decode().split(" ")
     if (len(msg_lst) != 7):
         print("Incorrect msg received")
+        print(msg_lst)
+        return MapToGalil(delta_q)
+    goStart = False
     # Update Version
-    elif msg_lst[0] == "spos":
-        delta_q = [float(num) for num in msg_lst[1:]]
-        print(delta_q)
+    delta_q = [float(num) for num in msg_lst[1:]]
+    if msg_lst[0] == "spos":
+        print("Move To Position")
+    elif msg_lst[0] == "home":
+        goStart = True
+        print("Move to Start Position")
     
-    return MapToGalil(delta_q)
-
+    return MapToGalil(delta_q), goStart
 
 def SendMovementCommand(rob, delta_q, update_Q):
-    if np.sum(delta_q) == 0:
+    if np.count_nonzero(delta_q) == 0:
         print(delta_q)
         print("No motion")
         return False, update_Q
-    
+
     valid_move = check_for_valid(update_Q, delta_q)
     valid_move = True
     if not valid_move:
@@ -178,15 +190,17 @@ def SendMovementCommand(rob, delta_q, update_Q):
     rob.setMotorConstraints('MaxSpeed', 150000)
     rob.setMotorConstraints('MaxAcc', 1000000)
     rob.setMotorConstraints('MaxDec', 1000000)
-    print('-------------- Motion: {} --------------'.format(delta_q))
+    print('-------------- Motion --------------')
+    print(delta_q)
     #tracker._BEEP(1)    
     rob.jointPTPLinearMotionSinglePoint(delta_q, sKurve=True, sKurveValue=0.004)
     update_Q += delta_q
-    print("'-------------- Current Joint Info --------------")
+    print("-------------- Current Joint Info --------------")
     print(rob.getJointPositions())
+    print("-------------- update Q --------------" )
+    print(update_Q)
     # time.sleep(.5)
     return True, update_Q
-
 
 def Exit(rob, update_Q):
     print('-------------- close robot and measurement system --------------')
@@ -195,7 +209,6 @@ def Exit(rob, update_Q):
     if ROB_EXIST:
         rob.motorsOff()
         rob.disconnect()
-
 
 def MapToGalil(delta_q):
     
