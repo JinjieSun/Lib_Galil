@@ -538,6 +538,7 @@ class GalilRobot:
         :param sKurveValue:
         :return:
         """
+        # t = time.time()
 
         self._send_cmd('LM ' + self._numActuatorStr)
         self._send_cmd('CS S')  # Clear Sequence on coordinate S
@@ -559,15 +560,17 @@ class GalilRobot:
         self._send_cmd('VS ' + ','.join(map(str, self._listMaxSpeed)))
         #self._send_cmd('BG ' + self._numActuatorStr)
         #self._send_cmd('AM ' + self._numActuatorStr)
-        #time.sleep(1)
         self._send_cmd('BGS')  # Begin Motion in coordinate S
         if sKurve:
             self._send_cmd('IT ' + str(sKurveValue))
 
+        # tf = time.time() - t + 1e-5
+        # print("Time for Galil to Send Command: " + str(tf) + " " + str(1/tf) + " Hz")
+
         # GMotionComplete instead of self._send_cmd('AM') which is not supported
         # self._galilBoard.GMotionComplete(self._numActuatorStr)
+        
         self._galilBoard.GMotionComplete('S')
-
         self.updateJointPositions()
 
         # because of the exception and PEP 8.0 guideline

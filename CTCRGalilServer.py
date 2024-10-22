@@ -94,10 +94,12 @@ def goStartPos(rob, update_Q, delta_q = None):
         end_valid = check_for_valid(update_Q, delta_q)
 
         diff_l2 = np.linalg.norm(np.array(update_Q)  + np.array(delta_q) - np.array(START_POS))
+        Go_To_Start_Pos_in_joint = not (front_valid and end_valid)
         if (diff_l2 > 1e-3):
             print("Invalid go homt joint values, difference: " + str(diff_l2))
             print("Est result: " + str(np.array(update_Q)  + np.array(delta_q)))
-        elif not (front_valid and end_valid):
+            Go_To_Start_Pos_in_joint = True
+        if Go_To_Start_Pos_in_joint:
             delta_q = START_POS - update_Q
 
     result, update_Q = SendMovementCommand(rob, delta_q, update_Q)
@@ -117,7 +119,6 @@ def InitRobot():
         rob.connect()
         rob.motorsOn()
         rob.setHome()
-        time.sleep(1)
         rob.printInfo(detailed=True) 
         return rob
 
@@ -139,7 +140,10 @@ def Connect(rob):
         result, update_Q = goStartPos(rob, update_Q)
         try:
             while True:
+                ts = time.time()
                 data = conn.recv(1024)
+                t_server = time.time() - ts + 0.00001
+                # print("time for reading from socket: " + str(t_server) + "s ----" + str(1/t_server) + " HZ")
                 if not data:
                     break
                 # print(data.decode())
@@ -176,6 +180,7 @@ def DecodeMessage(data):
     return MapToGalil(delta_q), goStart
 
 def SendMovementCommand(rob, delta_q, update_Q):
+    ts = time.time()
     if np.count_nonzero(delta_q) == 0:
         print(delta_q)
         print("No motion")
@@ -187,19 +192,20 @@ def SendMovementCommand(rob, delta_q, update_Q):
         print("Invalid Movement: No motion")
         return False, update_Q 
     
-    rob.setMotorConstraints('MaxSpeed', 150000)
-    rob.setMotorConstraints('MaxAcc', 1000000)
-    rob.setMotorConstraints('MaxDec', 1000000)
+    rob.setMotorConstraints('MaxSpeed',300000)
+    rob.setMotorConstraints('MaxAcc', 1500000)
+    rob.setMotorConstraints('MaxDec', 1500000)
     print('-------------- Motion --------------')
     print(delta_q)
     #tracker._BEEP(1)    
     rob.jointPTPLinearMotionSinglePoint(delta_q, sKurve=True, sKurveValue=0.004)
     update_Q += delta_q
-    print("-------------- Current Joint Info --------------")
-    print(rob.getJointPositions())
-    print("-------------- update Q --------------" )
-    print(update_Q)
-    # time.sleep(.5)
+    # print("-------------- Current Joint Info --------------")
+    # print(rob.getJointPositions())
+    # print("-------------- update Q --------------" )
+    # print(update_Q)
+    t_end = time.time() - ts
+    print("time for Galil To Move: " + str(t_end) + "s ----" + str(1/t_end) + " HZ")
     return True, update_Q
 
 def Exit(rob, update_Q):
@@ -261,4 +267,6 @@ if __name__ == '__main__':
     in_bool = True
     # ROB = None
     ROB = InitRobot()
+    # in ms?
+    ROB._galilBoard.GTimeout(30)
     Connect(rob=ROB)
