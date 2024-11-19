@@ -7,14 +7,13 @@ import time
 
 Tube_Length = [129, 82, 42]
 DELTAQ = np.zeros((6,))
-# START_POS = [0, 10, 0, 6, 0, 3]
-# START_POS = [0, 39, 0, 20, 0, 12]
+
+# Start Position 1
 START_POS = [0, 59, 0, 37, 0, 22]
+# Start Position 2
+# START_POS = [0, 74, 0, 49, 0, 10]
 
 
-# START_POS = [90, 59, 0, 20, 0, 10]
-
-# START_POS = [0, 0, 0, 0, 0, 0]
 
 """
 
@@ -187,7 +186,6 @@ def SendMovementCommand(rob, delta_q, update_Q):
         return False, update_Q
 
     valid_move = check_for_valid(update_Q, delta_q)
-    valid_move = True
     if not valid_move:
         print("Invalid Movement: No motion")
         return False, update_Q 

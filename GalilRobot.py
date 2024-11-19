@@ -520,6 +520,7 @@ class GalilRobot:
 
         # GMotionComplete instead of self._send_cmd('AM') which is not supported
         # self._galilBoard.GMotionComplete(self._numActuatorStr)
+        # #Warning: Removed the blocking calls to accelerate the motion, might cause
         self._galilBoard.GMotionComplete('S')
 
         self.updateJointPositions()
