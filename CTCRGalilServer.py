@@ -196,7 +196,7 @@ def SendMovementCommand(rob, delta_q, update_Q):
     print('-------------- Motion --------------')
     print(delta_q)
     #tracker._BEEP(1)    
-    rob.jointPTPLinearMotionSinglePoint(delta_q, sKurve=True, sKurveValue=0.004)
+    rob.jointPTPLinearMotionSinglePoint(delta_q, sKurve=True, sKurveValue=0.5)
     update_Q += delta_q
     # print("-------------- Current Joint Info --------------")
     # print(rob.getJointPositions())
