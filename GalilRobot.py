@@ -7,6 +7,7 @@ import math
 from enum import IntEnum
 import numpy as np
 import time
+import os, sys
 
 
 class RobotAxisID(IntEnum):
@@ -483,7 +484,37 @@ class GalilRobot:
     #     activeAxis = self._dictRobotAxisIDToChan.values()
     #     return galilCmd + ','.join(activeAxis)
 
-    def jointPTPLinearMotion(self, axisRelativeDistances, sKurve=False, sKurveValue=0.5):  #S
+    
+        
+    def jointPTPDirectMotion(self, axisRelativeDistances):
+        try:
+            viaPoint = axisRelativeDistances
+            viaPointTicks = [0] * self._numActuator
+            for idx in range(self._numActuator):
+                # viaPointTicks is sorted alphabetically (Galil-Channel via self._numActuatorStr[idx])
+                viaPointTicks[idx] = viaPoint[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value] * \
+                                    self._listUnitToTick[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value]
+                viaPointTicks[idx] = np.round(viaPointTicks[idx])
+            print(','.join(map(str, viaPointTicks)))
+
+            self._send_cmd('DC ' + ','.join(map(str, self._listMaxAcc)))
+            self._send_cmd('AC ' + ','.join(map(str, self._listMaxDec)))
+            if not all(v == 0 for v in viaPointTicks):
+                self._send_cmd('IP ' + ','.join(map(str, viaPointTicks)))
+            
+            # Stop Motion
+            self._send_cmd('IP ' + ','.join(map(str, [0] * self._numActuator)))
+            self.updateJointPositions()
+        
+        except Exception as e:
+            print("Error Occur During connection")
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+        # because of the exception and PEP 8.0 guideline
+        return None
+
+    def jointPTPLinearMotion(self, axisRelativeDistances, sKurve=False, sKurveValue=1):  #S
         """
         Synchronized linear trajectory generator. It generates a trajectory in Joint space.
 

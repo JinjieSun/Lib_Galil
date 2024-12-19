@@ -4,12 +4,16 @@ from GalilRobot import GalilRobot
 # from Aurora import Aurora
 import numpy as np
 import time
+import sys, os
 
 Tube_Length = [129, 82, 42]
 DELTAQ = np.zeros((6,))
 
 # Start Position 1
-START_POS = [0, 59, 0, 37, 0, 22]
+START_POS = [0, 10, 0, 0, 0, 0]
+
+
+# START_POS = [0, 59, 0, 37, 0, 22]
 # Start Position 2
 # START_POS = [0, 74, 0, 49, 0, 10]
 
@@ -154,14 +158,16 @@ def Connect(rob):
                 # print(decoded_msg)
                 conn.send(bytes((result,)))
             print("Quit!")     
-        except:
+        except Exception as e:
             print("Error Occur During connection")
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
         Exit(rob, update_Q)
 
 def DecodeMessage(data):
     
     delta_q = [0] * 6
-    
     msg_lst = data.decode().split(" ")
     if (len(msg_lst) != 7):
         print("Incorrect msg received")
@@ -177,6 +183,9 @@ def DecodeMessage(data):
         print("Move to Start Position")
     
     return MapToGalil(delta_q), goStart
+
+
+# def SendMovementDirectMovementCommand()
 
 def SendMovementCommand(rob, delta_q, update_Q):
     ts = time.time()
@@ -195,8 +204,11 @@ def SendMovementCommand(rob, delta_q, update_Q):
     rob.setMotorConstraints('MaxDec', 1500000)
     print('-------------- Motion --------------')
     print(delta_q)
-    #tracker._BEEP(1)    
-    rob.jointPTPLinearMotionSinglePoint(delta_q, sKurve=True, sKurveValue=0.5)
+    #tracker._BEEP(1)   
+    if (np.linalg.norm(np.array(delta_q)) > 5): 
+        rob.jointPTPLinearMotionSinglePoint(delta_q, sKurve=True, sKurveValue=1)
+    else:
+        rob.jointPTPDirectMotion(delta_q)
     update_Q += delta_q
     # print("-------------- Current Joint Info --------------")
     # print(rob.getJointPositions())
@@ -213,6 +225,7 @@ def Exit(rob, update_Q):
     if ROB_EXIST:
         rob.motorsOff()
         rob.disconnect()
+
 
 def MapToGalil(delta_q):
     
