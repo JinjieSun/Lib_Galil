@@ -10,7 +10,7 @@ Tube_Length = [129, 82, 42]
 DELTAQ = np.zeros((6,))
 
 # Start Position 1
-START_POS = [0, 10, 0, 0, 0, 0]
+START_POS = [0, 20, 0, 20, 0, 10]
 
 
 # START_POS = [0, 59, 0, 37, 0, 22]

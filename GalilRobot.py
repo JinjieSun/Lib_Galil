@@ -483,9 +483,7 @@ class GalilRobot:
     # def _createActiveChanCmd(self, galilCmd):
     #     activeAxis = self._dictRobotAxisIDToChan.values()
     #     return galilCmd + ','.join(activeAxis)
-
     
-        
     def jointPTPDirectMotion(self, axisRelativeDistances):
         try:
             viaPoint = axisRelativeDistances
@@ -495,19 +493,22 @@ class GalilRobot:
                 viaPointTicks[idx] = viaPoint[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value] * \
                                     self._listUnitToTick[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value]
                 viaPointTicks[idx] = np.round(viaPointTicks[idx])
-            print(','.join(map(str, viaPointTicks)))
+            print('Tickes: ' + ','.join(map(str, viaPointTicks)))
 
+           
+            if not all(v == 0 for v in viaPointTicks):
+                self._send_cmd('JG ' + ','.join(map(str, viaPointTicks)))
+            
             self._send_cmd('DC ' + ','.join(map(str, self._listMaxAcc)))
             self._send_cmd('AC ' + ','.join(map(str, self._listMaxDec)))
-            if not all(v == 0 for v in viaPointTicks):
-                self._send_cmd('IP ' + ','.join(map(str, viaPointTicks)))
-            
+            self._send_cmd('BG')  # Begin Motion in coordinate S
             # Stop Motion
-            self._send_cmd('IP ' + ','.join(map(str, [0] * self._numActuator)))
+            self._send_cmd('ST')
+            # self._send_cmd('ST ' + ','.join(map(str, [0] * self._numActuator)))
             self.updateJointPositions()
         
         except Exception as e:
-            print("Error Occur During connection")
+            print("Error Occur During Galil Board Control")
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
