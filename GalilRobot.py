@@ -69,7 +69,7 @@ class GalilRobot:
 
         # position in joint space np.array([a1, b1, a2, b2, a3, b3])
         self._listJointpositions = [0.0] * self._numActuator
-        self._listJointpositionsMin = np.array([0.0, -144.0, 0.0, -115.0, 0.0, -81.0])  # <- hard gecodet...
+        self._listJointpositionsMin = np.array([0.0, -129.0, 0.0, -82.0, 0.0, -42.0])  # <- hard gecodet...
         self._listJointpositionsMax = np.array([2*np.pi, 0.0, 2*np.pi, 0.0, 2*np.pi, 0.0])  # <- hard gecodet...
 
 
@@ -199,24 +199,6 @@ class GalilRobot:
         :param cmd: Command to send
         """
         return self._galilBoard.GCommand(cmd)
-
-    # def setDictChanToIdx(self, dictChanToIdx):
-    #     # _dictChanToIdx = {'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5, 'G': 6, 'H': 7}
-    #     for val in dictChanToIdx.itervalues():
-    #         if not val >= 0 and not val < len(self._dictChanToIdx):
-    #             print("\033[93m" +
-    #                   "Warning in setDictChanToIdx(): Fail to set objects " + str(val) + " ." +
-    #                   " \033[0m")
-    #             return None
-    #     for key in dictChanToIdx.iterkeys():
-    #         if not key >= ord('A') and not val < ord('A') + len(self._dictChanToIdx):
-    #             print("\033[93m" +
-    #                   "Warning in setDictChanToIdx(): Fail to set key " + key + " ." +
-    #                   " \033[0m")
-    #             return None
-    #
-    #     self._dictChanToIdx = dictChanToIdx
-    #     return None
 
     def connect(self):
         """Connects to the GalilBoard with the ipAdress from ConfigFile"""
@@ -484,27 +466,46 @@ class GalilRobot:
     #     activeAxis = self._dictRobotAxisIDToChan.values()
     #     return galilCmd + ','.join(activeAxis)
     
+    def interpolate_6d_step(step_vec, max_step=10_000):
+        """
+        Given a 6‑D step vector (tuple/list/array of length‑6) that moves a
+        robot from ⃗0 to ⃗step_vec, return a list of 6‑D vectors representing
+        intermediate way‑points such that *no individual axis* changes by more
+        than ±max_step between successive vectors.
+  
+        The first vector is always the origin (all zeros); the last is step_vec.
+        """
+        step_vec = np.asarray(step_vec, dtype=float)
+        
+        # How many segments are needed so that every component increment ≤ max_step?
+        n_segments = int(np.ceil(np.max(np.abs(step_vec)) / max_step))
+        if n_segments == 0:
+            return [np.zeros(6), step_vec]          # trivially short move
+        
+        # Build parameter t = 0 … 1 at uniform spacing
+        ts = np.linspace(0, 1, n_segments + 1)      # n_segments intervals → n_segments+1 points
+        waypoints = (ts[:, None] * step_vec).tolist()
+        return waypoints
+
+
     def jointPTPDirectMotion(self, axisRelativeDistances):
         try:
             viaPoint = axisRelativeDistances
             viaPointTicks = [0] * self._numActuator
+
             for idx in range(self._numActuator):
                 # viaPointTicks is sorted alphabetically (Galil-Channel via self._numActuatorStr[idx])
                 viaPointTicks[idx] = viaPoint[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value] * \
                                     self._listUnitToTick[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value]
                 viaPointTicks[idx] = np.round(viaPointTicks[idx])
-            print('Tickes: ' + ','.join(map(str, viaPointTicks)))
-
-           
-            if not all(v == 0 for v in viaPointTicks):
-                self._send_cmd('JG ' + ','.join(map(str, viaPointTicks)))
             
-            self._send_cmd('DC ' + ','.join(map(str, self._listMaxAcc)))
-            self._send_cmd('AC ' + ','.join(map(str, self._listMaxDec)))
-            self._send_cmd('BG')  # Begin Motion in coordinate S
-            # Stop Motion
-            self._send_cmd('ST')
-            # self._send_cmd('ST ' + ','.join(map(str, [0] * self._numActuator)))
+            # self._send_cmd('DC ' + ','.join(map(str, self._listMaxAcc)))
+            # self._send_cmd('AC ' + ','.join(map(str, self._listMaxDec)))
+            # self._send_cmd('ST')
+            if not all(v == 0 for v in viaPointTicks):
+                viaPointTicks = viaPointTicks*5
+                self._send_cmd('IP ' + ','.join(map(str, viaPointTicks)))
+                # print(viaPointTicks)
             self.updateJointPositions()
         
         except Exception as e:
@@ -572,8 +573,9 @@ class GalilRobot:
         """
         # t = time.time()
 
+        self._send_cmd('ST')
+        # self._send_cmd('CS S')  # Clear Sequence on coordinate S
         self._send_cmd('LM ' + self._numActuatorStr)
-        self._send_cmd('CS S')  # Clear Sequence on coordinate S
 
         viaPoint = axisRelativeDistances
         viaPointTicks = [0] * self._numActuator
@@ -583,6 +585,7 @@ class GalilRobot:
                                  self._listUnitToTick[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value]
             viaPointTicks[idx] = np.round(viaPointTicks[idx])
 
+        print(viaPointTicks)
         if not all(v == 0 for v in viaPointTicks):
             self._send_cmd('LI ' + ','.join(map(str, viaPointTicks)))
 
@@ -618,6 +621,8 @@ class GalilRobot:
                         self._listUnitToTick[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value]
 
     def getJointPositions(self, getDesired=False):
+
+        t_s = time.time()
         JointPosition = np.zeros(self._numActuator)
 
         if getDesired:
@@ -626,6 +631,7 @@ class GalilRobot:
                     JointPosition[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value] = \
                         self._listJointpositions[self._dictChanToRobotAxisID[chan]]
         else:
+            # self._send_cmd("ST")
             self._send_cmd('PF 10.4')
             for chan, idx in self._dictChanToIdx.items():
                 if chan in self._dictChanToRobotAxisID:
@@ -633,6 +639,7 @@ class GalilRobot:
                         float(self._send_cmd('TP ' + chan)) / \
                         self._listUnitToTick[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value]
 
+        # print("running time: ", 1/(time.time() - t_s+1e-10), "Hz")
         return JointPosition
 
     def collisionCarrier(self, nextPosition):

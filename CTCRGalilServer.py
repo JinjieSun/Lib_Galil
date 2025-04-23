@@ -12,8 +12,6 @@ DELTAQ = np.zeros((6,))
 # Start Position 1
 START_POS = [0, 20, 0, 20, 0, 10]
 
-
-# START_POS = [0, 59, 0, 37, 0, 22]
 # Start Position 2
 # START_POS = [0, 74, 0, 49, 0, 10]
 
@@ -90,6 +88,8 @@ def GoHome(rob, update_Q):
 def goStartPos(rob, update_Q, delta_q = None):
     # if np.any(update_Q != np.zeros((6,))):
     #     update_Q = GoHome(rob, update_Q)
+    if rob is None:
+        return -1, START_POS
     if delta_q == None:
         delta_q = START_POS - update_Q
     else:
@@ -144,7 +144,7 @@ def Connect(rob):
         try:
             while True:
                 ts = time.time()
-                data = conn.recv(1024)
+                data = conn.recv(4096)
                 t_server = time.time() - ts + 0.00001
                 # print("time for reading from socket: " + str(t_server) + "s ----" + str(1/t_server) + " HZ")
                 if not data:
@@ -184,7 +184,6 @@ def DecodeMessage(data):
     
     return MapToGalil(delta_q), goStart
 
-
 # def SendMovementDirectMovementCommand()
 
 def SendMovementCommand(rob, delta_q, update_Q):
@@ -202,13 +201,14 @@ def SendMovementCommand(rob, delta_q, update_Q):
     rob.setMotorConstraints('MaxSpeed',300000)
     rob.setMotorConstraints('MaxAcc', 1500000)
     rob.setMotorConstraints('MaxDec', 1500000)
-    print('-------------- Motion --------------')
-    print(delta_q)
+    # print('-------------- Motion --------------')
+    # print(delta_q)
     #tracker._BEEP(1)   
     if (np.linalg.norm(np.array(delta_q)) > 5): 
+        print("In Single Point Motion")
         rob.jointPTPLinearMotionSinglePoint(delta_q, sKurve=True, sKurveValue=1)
     else:
-        rob.jointPTPDirectMotion(delta_q)
+        rob.jointPTPLinearMotionSinglePoint(delta_q, sKurve=True, sKurveValue=1)
     update_Q += delta_q
     # print("-------------- Current Joint Info --------------")
     # print(rob.getJointPositions())
@@ -225,7 +225,6 @@ def Exit(rob, update_Q):
     if ROB_EXIST:
         rob.motorsOff()
         rob.disconnect()
-
 
 def MapToGalil(delta_q):
     
@@ -266,7 +265,6 @@ if __name__ == '__main__':
     
     # Initialization
 
-  
 
 
     ROB_EXIST = True
@@ -274,10 +272,8 @@ if __name__ == '__main__':
     n_measurements = 10
     break_time_measurement = 0.1
 
-    up_bool = True
-    in_bool = True
-    # ROB = None
+    
     ROB = InitRobot()
-    # in ms?
+    # # in ms?
     ROB._galilBoard.GTimeout(30)
     Connect(rob=ROB)
