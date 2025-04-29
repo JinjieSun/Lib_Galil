@@ -175,14 +175,14 @@ CTRL-C to quit
 if __name__=="__main__":
 
     PORT = 8190
-    increment = 1 # mm
-    rot_increment = 1  #Deg
+    increment = 3 # mm
+    rot_increment = 2  #Deg
     rate = 10  # Hz
     repeat = 0.0
 
-    print("increment: ", increment, "mm")
+    print("velocity: ", increment, "mm")
     print("rate: ", rate, "Hz")
-    print("speed if you hold down keys: ", increment * rate, " mm/s")
+    print("speed if you hold down keys: ", increment, " mm/s")
 
     # pub_tf_thread = PublishTransformThread(repeat)
     

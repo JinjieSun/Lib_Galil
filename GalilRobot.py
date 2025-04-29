@@ -488,7 +488,7 @@ class GalilRobot:
         return waypoints
 
 
-    def jointPTPDirectMotion(self, axisRelativeDistances):
+    def jointPTPDirectMotion(self, axisRelativeDistances, diff_direction=False):
         try:
             viaPoint = axisRelativeDistances
             viaPointTicks = [0] * self._numActuator
@@ -502,10 +502,14 @@ class GalilRobot:
             # self._send_cmd('DC ' + ','.join(map(str, self._listMaxAcc)))
             # self._send_cmd('AC ' + ','.join(map(str, self._listMaxDec)))
             # self._send_cmd('ST')
+            if diff_direction:
+                self._send_cmd('ST')
+            print(viaPointTicks)
             if not all(v == 0 for v in viaPointTicks):
-                viaPointTicks = viaPointTicks*5
+                viaPointTicks = viaPointTicks
                 self._send_cmd('IP ' + ','.join(map(str, viaPointTicks)))
-                # print(viaPointTicks)
+            else:
+                self._send_cmd('ST')
             self.updateJointPositions()
         
         except Exception as e:
@@ -613,7 +617,6 @@ class GalilRobot:
 
     def updateJointPositions(self):
         self._send_cmd('PF 10.4')
-
         for chan, idx in self._dictChanToIdx.items():
             if chan in self._dictChanToRobotAxisID:
                 self._listJointpositions[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value] = \

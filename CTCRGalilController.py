@@ -217,7 +217,7 @@ class RobotWorkerThread(threading.Thread):
         self.q_cur = None
         self.tube_length = Tube_Length
         self.start()
-        
+        self.prev_q_delta = None
     def run(self):
         self.q_cur = [0.] * 6
         while self.running:
@@ -240,7 +240,9 @@ class RobotWorkerThread(threading.Thread):
     
     def send_movement_command(self, q_delta):
         ts = time.time()
-        if np.count_nonzero(q_delta) == 0:
+
+
+        if (np.count_nonzero(self.prev_q_delta) == 0) and (np.count_nonzero(q_delta) == 0):
             return False
 
         valid_move = check_for_valid(self.tube_length, self.q_cur, q_delta)
@@ -250,22 +252,25 @@ class RobotWorkerThread(threading.Thread):
     
         print('-------------- Motion --------------')
         
+        diff_direction = np.any(self.prev_q_delta * q_delta < 0) if self.prev_q_delta is not None else False
+        
         #tracker._BEEP(1)   
         if (np.linalg.norm(np.array(q_delta)) > 5): 
             print("In Single Point Motion")
             # rob.jointPTPDirectMotion(q_delta)
             self.rob.jointPTPLinearMotionSinglePoint(q_delta, sKurve=True, sKurveValue=0.004)
         else:
-            self.rob.jointPTPDirectMotion(q_delta)
+            self.rob.jointPTPDirectMotion(q_delta, diff_direction)
             # self.rob.jointPTPLinearMotionSinglePoint(q_delta, sKurve=True, sKurveValue=0.004)
-            # rob.jointPTPLinearMotionSinglePoint(q_delta, sKurve=True, sKurveValue=1)
-        
+
+        self.prev_q_delta = q_delta
         # print("-------------- Current Joint Info --------------")
         # print(rob.getJointPositions())
         # print("-------------- update Q --------------" )
         # print(update_Q)
         t_end = time.time() - ts
         self.q_cur = self.rob.getJointPositions()
+        # self.q_cur += q_delta
         print("time for Galil To Move: " + str(t_end) + "s ----" + str(1/t_end) + " HZ")
         return True
    
