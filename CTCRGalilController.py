@@ -14,7 +14,6 @@ import queue
 
 
 # Start Position 1
-START_POS = [0, 20, 0, 20, 0, 10]
 TUBE_OFFSETS = np.array([0, 10, 0, 0, 0, 0])
 TUBE_LENGTH = [129, 82, 42]
 
@@ -82,10 +81,9 @@ def InitRobot():
         rob.motorsOn()
         rob.setHome()
         # Modified Speed and Acc/Dec
-        rob.setMotorConstraints('MaxSpeed',300000)
-        rob.setMotorConstraints('MaxAcc', 1000000)
-        rob.setMotorConstraints('MaxDec', 1000000)
-
+        rob.setMotorConstraints('MaxSpeed',212485)
+        rob.setMotorConstraints('MaxAcc', 900000)
+        rob.setMotorConstraints('MaxDec', 900000) 
         rob.printInfo(detailed=True) 
         return rob
 
@@ -219,7 +217,7 @@ class RobotWorkerThread(threading.Thread):
         self.start()
         self.prev_q_delta = None
     def run(self):
-        self.q_cur = [0.] * 6
+        self.q_cur = np.zeros(6)
         while self.running:
             
             with self.stack_lock:
@@ -233,7 +231,7 @@ class RobotWorkerThread(threading.Thread):
                 result = True
                        
             with self.stack_lock:
-                self.joint_stack.append(self.q_cur)
+                self.joint_stack.append(self.q_cur + TUBE_OFFSETS)
                 if len(self.joint_stack) > 1000:
                     self.joint_stack.pop(0)
             time.sleep(self.period)

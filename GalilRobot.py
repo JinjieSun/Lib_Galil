@@ -421,7 +421,9 @@ class GalilRobot:
                 self._listMaxDec[axisID] = constraintValue
             else:
                 self._listMaxDec = [constraintValue] * len(self._listMaxDec)
-            # self._send_cmd('VD ' + ','.join(map(str, self._listMaxDec)))
+            
+            self._send_cmd('VD ' + ','.join(map(str, self._listMaxDec)))
+            self._send_cmd('DC ' + ','.join(map(str, self._listMaxDec)))
         else:
             print("\033[93m" +
                   "Warning in setMotorConstraints(): Wrong motion constraint type." +
@@ -487,7 +489,6 @@ class GalilRobot:
         waypoints = (ts[:, None] * step_vec).tolist()
         return waypoints
 
-
     def jointPTPDirectMotion(self, axisRelativeDistances, diff_direction=False):
         try:
             viaPoint = axisRelativeDistances
@@ -499,12 +500,11 @@ class GalilRobot:
                                     self._listUnitToTick[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value]
                 viaPointTicks[idx] = np.round(viaPointTicks[idx])
             
-            # self._send_cmd('DC ' + ','.join(map(str, self._listMaxAcc)))
-            # self._send_cmd('AC ' + ','.join(map(str, self._listMaxDec)))
-            # self._send_cmd('ST')
+            
+            self._send_cmd('AC ' + ','.join(map(str, self._listMaxAcc)))
+            self._send_cmd('SP ' + ','.join(map(str, self._listMaxSpeed)))
             if diff_direction:
                 self._send_cmd('ST')
-            print(viaPointTicks)
             if not all(v == 0 for v in viaPointTicks):
                 viaPointTicks = viaPointTicks
                 self._send_cmd('IP ' + ','.join(map(str, viaPointTicks)))
@@ -589,7 +589,6 @@ class GalilRobot:
                                  self._listUnitToTick[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value]
             viaPointTicks[idx] = np.round(viaPointTicks[idx])
 
-        print(viaPointTicks)
         if not all(v == 0 for v in viaPointTicks):
             self._send_cmd('LI ' + ','.join(map(str, viaPointTicks)))
 
