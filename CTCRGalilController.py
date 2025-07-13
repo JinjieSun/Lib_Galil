@@ -10,17 +10,15 @@ import queue
 
 
 
-
-
-
-# Start Position 1
+# DEFAULT VALUES
 TUBE_OFFSETS = np.array([0, 10, 0, 0, 0, 0])
 TUBE_LENGTH = [129, 82, 42]
+TUBE_INITAL_POSITION = np.array([0, 20, 0, 20, 0, 10])
 
 ###############################################################################
 # Helper Function
 ###############################################################################
-def end_checking(tube_length, q_cur, q_delta):
+def end_checking(tube_length, q_cur, q_delta, tol=1e-2):
     
     l3, l2, l1 = tube_length
     _, f3, _, f2, _, f1 = q_cur
@@ -31,11 +29,11 @@ def end_checking(tube_length, q_cur, q_delta):
     t2_end = f2 + d2 - l2
     t1_end = f1 + d1 - l1
 
-    if (t3_end > t2_end):
+    if (t3_end-tol > t2_end):
         return False
-    if (t2_end > t1_end):
+    if (t2_end-tol > t1_end):
         return False
-    if (t1_end > 0):
+    if (t1_end-tol > 0):
         return False
     return True
 
@@ -62,8 +60,8 @@ def front_checking(tube_length, q_cur, q_delta, tol=1e-2):
     return True
 
 def check_for_valid(tube_length, q_cur, q_delta):
-    valid_front = front_checking(tube_length, q_cur, q_delta)
-    valid_back = end_checking(tube_length, q_cur, q_delta)
+    valid_front = front_checking(tube_length, q_cur, q_delta, tol=1)
+    valid_back = end_checking(tube_length, q_cur, q_delta, tol=1)
     if not valid_front or not valid_back:
         print("Error Occurs on new update joints!!!")
         print(f"Tube Front Valid {valid_front}  End Valid {valid_back}")
@@ -181,8 +179,9 @@ class SocketListenerThread(threading.Thread):
                                 break
                             delta_q, action = DecodeMessage(data)
                             with self.stack_lock:
+                                print("Action Recerive: " + action)
+                                print("delta q: " + str(delta_q))
                                 self.cmd_stack.append((action, delta_q))
-
                             with self.stack_lock:
                                 q_cur = self.joint_stack[-1] if self.joint_stack else q_cur
                                 if q_cur is not None:
@@ -204,7 +203,7 @@ class SocketListenerThread(threading.Thread):
 ###############################################################################
 class RobotWorkerThread(threading.Thread):
     def __init__(self, cmd_stack: list, rob: GalilRobot, joint_stack: list[float],
-                 stack_lock: threading.Lock, loop_hz: float = 10.0, Tube_Length = [129, 82, 42]):
+                 stack_lock: threading.Lock, loop_hz: float = 30.0, Tube_Length = [129, 82, 42]):
         super().__init__(daemon=True)
         self.cmd_stack = cmd_stack
         self.joint_stack   = joint_stack
@@ -216,20 +215,21 @@ class RobotWorkerThread(threading.Thread):
         self.tube_length = Tube_Length
         self.start()
         self.prev_q_delta = None
+    
     def run(self):
         self.q_cur = np.zeros(6)
+        self.go_home(toInitialPos=True)
         while self.running:
-            
             with self.stack_lock:
-                (action, q_delta) = self.cmd_stack[-1] if self.cmd_stack else (None, [0.] * 6) 
+                (action, q_delta) = self.cmd_stack.pop() if self.cmd_stack else (None, [0.] * 6) 
             if action == "spos":
                 result = self.send_movement_command(q_delta)
             elif action == "home":
-                result = self.go_home()
+                result = self.go_home(toInitialPos=True)
             elif action == "gpos":
                 self.q_cur = self.rob.getJointPositions()
                 result = True
-                       
+               
             with self.stack_lock:
                 self.joint_stack.append(self.q_cur + TUBE_OFFSETS)
                 if len(self.joint_stack) > 1000:
@@ -238,18 +238,16 @@ class RobotWorkerThread(threading.Thread):
     
     def send_movement_command(self, q_delta):
         ts = time.time()
-
-
         if (np.count_nonzero(self.prev_q_delta) == 0) and (np.count_nonzero(q_delta) == 0):
             return False
-
         valid_move = check_for_valid(self.tube_length, self.q_cur, q_delta)
         if not valid_move:
             print("Invalid Movement: No motion")
             return False
     
         print('-------------- Motion --------------')
-        
+        print("current cmd buffer size: " + str(len(self.cmd_stack)))
+        print(q_delta)
         diff_direction = np.any(self.prev_q_delta * q_delta < 0) if self.prev_q_delta is not None else False
         
         #tracker._BEEP(1)   
@@ -272,9 +270,12 @@ class RobotWorkerThread(threading.Thread):
         print("time for Galil To Move: " + str(t_end) + "s ----" + str(1/t_end) + " HZ")
         return True
    
-    def go_home(self):
+    def go_home(self, toInitialPos=False):
         self.q_cur = self.rob.getJointPositions()
-        q_movement = -self.q_cur
+        if toInitialPos:
+            q_movement = TUBE_INITAL_POSITION-self.q_cur
+        else:
+            q_movement = -self.q_cur
         print(q_movement)
         if np.any(q_movement != np.zeros((6,))):
             self.rob.jointPTPLinearMotionSinglePoint(q_movement, sKurve=True, sKurveValue=0.004)
@@ -283,10 +284,27 @@ class RobotWorkerThread(threading.Thread):
         self.q_init = self.q_cur
         return True
     
+    def error_compensation(self):
+        print("[Error Correction] Starting correction process")
+        
+        # Try moving in the opposite direction
+        corrective_delta = -0.5 * np.array(self.prev_q_delta)
+        print(f"[Error Correction] Attempting corrective move: {corrective_delta}")
+        
+        if check_for_valid(self.tube_length, self.q_cur, corrective_delta):
+            self.rob.jointPTPDirectMotion(corrective_delta)
+            self.q_cur = self.rob.getJointPositions()
+            print("[Error Correction] Successfully corrected out-of-bound pose.")
+            return True
+        else:
+            print("[Error Correction] Correction also invalid. Manual intervention may be required.")
+            return False
+
+
     def stop(self):
         print('-------------- close robot and measurement system --------------')
         # robot
-        _ = self.go_home()  
+        _ = self.go_home(toInitialPos=False)  
         if ROB_EXIST:
             self.rob.motorsOff()
             self.rob.disconnect()
