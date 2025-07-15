@@ -1,0 +1,35 @@
+<Cannula NumberOfTubes="3" Name="RoboSoft24">
+    <Tube Number="1" Type="StraightCurvedTube">
+        <TotalLength>198.6e-3</TotalLength>
+        <OuterDiameter>0.5e-3</OuterDiameter>
+        <InnerDiameter>0.4e-3</InnerDiameter>
+        <YoungsModulus>50e+9</YoungsModulus>
+        <PoissonsRatio>0.3</PoissonsRatio>
+        <StraightLength>133.3e-3</StraightLength>
+        <CurvatureX>13.1967</CurvatureX>
+        <CurvatureY>0</CurvatureY>
+        <CurvatureZ>0</CurvatureZ>
+    </Tube>
+    <Tube Number="2" Type="StraightCurvedTube">
+        <TotalLength>133.9e-3</TotalLength>
+        <OuterDiameter>0.9e-3</OuterDiameter>
+        <InnerDiameter>0.7e-3</InnerDiameter>
+        <YoungsModulus>50e+9</YoungsModulus>
+        <PoissonsRatio>0.3</PoissonsRatio>
+        <StraightLength>54.9e-3</StraightLength>
+        <CurvatureX>13.1828</CurvatureX>
+        <CurvatureY>0</CurvatureY>
+        <CurvatureZ>0</CurvatureZ>
+    </Tube>
+    <Tube Number="3" Type="StraightCurvedTube">
+        <TotalLength>94.1e-3</TotalLength>
+        <OuterDiameter>1.5e-3</OuterDiameter>
+        <InnerDiameter>1.2e-3</InnerDiameter>
+        <YoungsModulus>50e+9</YoungsModulus>
+        <PoissonsRatio>0.3</PoissonsRatio>
+        <StraightLength>55.9e-3</StraightLength>
+        <CurvatureX>2.8586</CurvatureX>
+        <CurvatureY>0</CurvatureY>
+        <CurvatureZ>0</CurvatureZ>
+    </Tube>
+</Cannula>

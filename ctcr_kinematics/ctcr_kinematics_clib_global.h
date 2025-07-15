@@ -1,0 +1,23 @@
+#ifndef CTCR_KINEMATICS_NTUBES_CLIB_GLOBAL_H
+#define CTCR_KINEMATICS_NTUBES_CLIB_GLOBAL_H
+
+// Windows
+#ifdef _WIN32
+#if defined(CTCR_KINEMATICS_CLIB_LIBRARY)
+#  define CTCR_KINEMATICS_CLIBSHARED_EXPORT __declspec(dllexport)
+#else
+#  define CTCR_KINEMATICS_CLIBSHARED_EXPORT __declspec(dllimport)
+#endif
+#endif
+
+// Linux
+#ifdef __unix__
+#if defined(CTCR_KINEMATICS_CLIB_LIBRARY)
+#define CTCR_KINEMATICS_CLIBSHARED_EXPORT
+#else
+#define CTCR_KINEMATICS_CLIBSHARED_EXPORT
+#endif
+#endif
+
+#endif // CTCR_KINEMATICS_NTUBES_CLIB_GLOBAL_H
+

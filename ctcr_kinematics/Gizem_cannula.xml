@@ -1,0 +1,38 @@
+<Cannula NumberOfTubes="3" Name="Cannula1">
+    <Tube Number="1" Type="StraightCurvedTube">
+        <TotalLength>700e-3</TotalLength>
+        <OuterDiameter>1.16e-3</OuterDiameter>
+        <InnerDiameter>0.86e-3</InnerDiameter>
+        <YoungsModulus>51e+9</YoungsModulus>
+        <PoissonsRatio>0.3</PoissonsRatio>
+        <StraightLength>600e-3</StraightLength>
+        <CurvatureX>15</CurvatureX>
+        <CurvatureY>0</CurvatureY>
+        <CurvatureZ>0</CurvatureZ>
+    </Tube>
+    <Tube Number="2" Type="StraightCurvedTube">
+        <TotalLength>480e-3</TotalLength>
+        <OuterDiameter>1.78e-3</OuterDiameter>
+        <InnerDiameter>1.52e-3</InnerDiameter>
+        <YoungsModulus>50e+9</YoungsModulus>
+        <PoissonsRatio>0.3</PoissonsRatio>
+        <StraightLength>400e-3</StraightLength>
+        <CurvatureX>12</CurvatureX>
+        <CurvatureY>0</CurvatureY>
+        <CurvatureZ>0</CurvatureZ>
+    </Tube>
+    <Tube Number="3" Type="StraightCurvedTube">
+        <TotalLength>330e-3</TotalLength>
+        <OuterDiameter>2.18e-3</OuterDiameter>
+        <InnerDiameter>2.02e-3</InnerDiameter>
+        <YoungsModulus>50e+9</YoungsModulus>
+        <PoissonsRatio>0.3</PoissonsRatio>
+        <StraightLength>280e-3</StraightLength>
+        <CurvatureX>10</CurvatureX>
+        <CurvatureY>0</CurvatureY>
+        <CurvatureZ>0</CurvatureZ>
+    </Tube>
+</Cannula>
+
+
+

@@ -1,0 +1,45 @@
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+import numpy as np
+
+class CTCRVisualizer:
+    def __init__(self, backbone_all):
+        """
+        backbone_all: np.ndarray of shape (N, P, 3)
+        """
+        self.backbone_all = backbone_all
+        self.num_frames = backbone_all.shape[0]
+        self.fig = plt.figure()
+        self.ax = self.fig.add_subplot(111, projection='3d')
+        self.line, = self.ax.plot([], [], [], 'b-', lw=2)
+        
+        # Set axis limits based on expected workspace
+        self.ax.set_xlim([-0.1, 0.1])
+        self.ax.set_ylim([-0.1, 0.1])
+        self.ax.set_zlim([0.0, 0.2])
+        self.ax.set_xlabel('X (m)')
+        self.ax.set_ylabel('Y (m)')
+        self.ax.set_zlabel('Z (m)')
+
+    def init_plot(self):
+        self.line.set_data([], [])
+        self.line.set_3d_properties([])
+        return self.line,
+
+    def update(self, frame):
+        backbone = self.backbone_all[frame]
+        x, y, z = backbone[:, 0], backbone[:, 1], backbone[:, 2]
+        self.line.set_data(x, y)
+        self.line.set_3d_properties(z)
+        return self.line,
+
+    def animate(self):
+        ani = animation.FuncAnimation(
+            self.fig,
+            self.update,
+            init_func=self.init_plot,
+            frames=self.num_frames,
+            interval=50,
+            blit=True
+        )
+        plt.show()

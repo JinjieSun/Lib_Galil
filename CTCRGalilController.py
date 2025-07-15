@@ -12,28 +12,32 @@ import queue
 
 # DEFAULT VALUES
 TUBE_OFFSETS = np.array([0, 10, 0, 0, 0, 0])
-TUBE_LENGTH = [129, 82, 42]
-TUBE_INITAL_POSITION = np.array([0, 20, 0, 20, 0, 10])
+TUBE_LENGTH = [129, 72, 42]
+TUBE_INITAL_POSITION = np.array([0, 70, 0, 40, 0, 30])
 
 ###############################################################################
 # Helper Function
 ###############################################################################
 def end_checking(tube_length, q_cur, q_delta, tol=1e-2):
     
+    tube_actual_length = tube_length 
     l3, l2, l1 = tube_length
     _, f3, _, f2, _, f1 = q_cur
 
     _, d3, _, d2, _, d1 = q_delta
 
-    t3_end = f3 + d3 - l3
-    t2_end = f2 + d2 - l2
-    t1_end = f1 + d1 - l1
+    t3_end = f3 + d3 - (l3 + TUBE_OFFSETS[1])
+    t2_end = f2 + d2 - (l2 + TUBE_OFFSETS[3])
+    t1_end = f1 + d1 - (l1 + TUBE_OFFSETS[5])
 
     if (t3_end-tol > t2_end):
+        print("t3 < t2: ", t3_end-tol, t2_end)
         return False
     if (t2_end-tol > t1_end):
+        print("t2 < t1: ", t2_end-tol, t1_end)
         return False
     if (t1_end-tol > 0):
+        print("t1 error: ", t1_end-tol)
         return False
     return True
 
@@ -146,9 +150,11 @@ class SocketListenerThread(threading.Thread):
                  host: str = "0.0.0.0",
                  port: int = 8190,
                  backlog: int = 1,
-                 bufsize: int = 2048):
+                 bufsize: int = 2048,
+                 cmd_stack_size: int = 30):
         super().__init__(daemon=True)
         self.cmd_stack = cmd_stack
+        self.cmd_stack_size = cmd_stack_size
         self.joint_stack = joint_stack
         self.stack_lock = stack_lock
         self.host = host
@@ -179,9 +185,11 @@ class SocketListenerThread(threading.Thread):
                                 break
                             delta_q, action = DecodeMessage(data)
                             with self.stack_lock:
-                                print("Action Recerive: " + action)
-                                print("delta q: " + str(delta_q))
+                                # print("Action Recerive: " + action)
+                                # print("delta q: " + str(delta_q))
                                 self.cmd_stack.append((action, delta_q))
+                                if len(self.cmd_stack) > self.cmd_stack_size:
+                                    _ = self.cmd_stack.pop(0)
                             with self.stack_lock:
                                 q_cur = self.joint_stack[-1] if self.joint_stack else q_cur
                                 if q_cur is not None:
@@ -203,7 +211,7 @@ class SocketListenerThread(threading.Thread):
 ###############################################################################
 class RobotWorkerThread(threading.Thread):
     def __init__(self, cmd_stack: list, rob: GalilRobot, joint_stack: list[float],
-                 stack_lock: threading.Lock, loop_hz: float = 30.0, Tube_Length = [129, 82, 42]):
+                 stack_lock: threading.Lock, loop_hz: float = 1000.0, Tube_Length = [129, 82, 42]):
         super().__init__(daemon=True)
         self.cmd_stack = cmd_stack
         self.joint_stack   = joint_stack
@@ -238,36 +246,35 @@ class RobotWorkerThread(threading.Thread):
     
     def send_movement_command(self, q_delta):
         ts = time.time()
+        if (self.rob.isRobotMoving()):
+            # print("Robot during movement, abort move cmd: " + str(q_delta))
+            return True
         if (np.count_nonzero(self.prev_q_delta) == 0) and (np.count_nonzero(q_delta) == 0):
             return False
         valid_move = check_for_valid(self.tube_length, self.q_cur, q_delta)
         if not valid_move:
-            print("Invalid Movement: No motion")
+            # print("Invalid Movement: No motion")
             return False
     
-        print('-------------- Motion --------------')
-        print("current cmd buffer size: " + str(len(self.cmd_stack)))
-        print(q_delta)
+        # print('-------------- Motion --------------')
+        # print("current cmd buffer size: " + str(len(self.cmd_stack)))
+        # print(q_delta)
         diff_direction = np.any(self.prev_q_delta * q_delta < 0) if self.prev_q_delta is not None else False
         
         #tracker._BEEP(1)   
-        if (np.linalg.norm(np.array(q_delta)) > 5): 
-            print("In Single Point Motion")
-            # rob.jointPTPDirectMotion(q_delta)
-            self.rob.jointPTPLinearMotionSinglePoint(q_delta, sKurve=True, sKurveValue=0.004)
-        else:
-            self.rob.jointPTPDirectMotion(q_delta, diff_direction)
-            # self.rob.jointPTPLinearMotionSinglePoint(q_delta, sKurve=True, sKurveValue=0.004)
-
+        # if (np.linalg.norm(np.array(q_delta)) > 5): 
+        #     print("In Single Point Motion")
+        #     # rob.jointPTPDirectMotion(q_delta)
+        #     self.rob.jointPTPLinearMotionSinglePoint(q_delta, sKurve=True, sKurveValue=0.004)
+        # else:
+        # self.rob.jointPTPLinearMotionSinglePoint(q_delta, sKurve=True, sKurveValue=0.004)
+        self.rob.jointPTPDirectMotion(q_delta, diff_direction)
         self.prev_q_delta = q_delta
-        # print("-------------- Current Joint Info --------------")
-        # print(rob.getJointPositions())
-        # print("-------------- update Q --------------" )
-        # print(update_Q)
         t_end = time.time() - ts
         self.q_cur = self.rob.getJointPositions()
         # self.q_cur += q_delta
-        print("time for Galil To Move: " + str(t_end) + "s ----" + str(1/t_end) + " HZ")
+        # print("time for Galil To Move: " + str(t_end) + "s ----" + str(1/t_end) + " HZ")
+        print("Current Joint Values: " + str(self.q_cur))
         return True
    
     def go_home(self, toInitialPos=False):
@@ -276,12 +283,14 @@ class RobotWorkerThread(threading.Thread):
             q_movement = TUBE_INITAL_POSITION-self.q_cur
         else:
             q_movement = -self.q_cur
+        # print(self.q_cur)
         print(q_movement)
         if np.any(q_movement != np.zeros((6,))):
             self.rob.jointPTPLinearMotionSinglePoint(q_movement, sKurve=True, sKurveValue=0.004)
         print("Homing Finished")
         self.q_cur = self.rob.getJointPositions()
         self.q_init = self.q_cur
+        # self.cmd_stack = []
         return True
     
     def error_compensation(self):

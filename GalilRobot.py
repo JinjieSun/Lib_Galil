@@ -8,7 +8,7 @@ from enum import IntEnum
 import numpy as np
 import time
 import os, sys
-
+import threading
 
 class RobotAxisID(IntEnum):
     """
@@ -35,11 +35,13 @@ class GalilRobot:
     GalilChannel = collections.namedtuple('GalilChannel', 'ChannelID RobotAxisID PIDParam DynParam')
     PIDParameter = collections.namedtuple('PIDParameter', 'Kp Ki Kd')
     DynamicParameter = collections.namedtuple('DynamicParameter', 'maxSpeed maxAcc')
-
+    
     # Map galil channel to position in command string
     _dictChanToIdx = {'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5, 'G': 6, 'H': 7}  # fixed convention
 
     def __init__(self, xmlpath, numActuator=6):
+        self.g_lock = threading.Lock()
+        self.ismoving = False
         self._galilBoard = gclib.py()
         GalilInfo = collections.namedtuple('GalilInfo', 'name ipAddr')
         self._info = GalilInfo('', '')
@@ -198,7 +200,8 @@ class GalilRobot:
 
         :param cmd: Command to send
         """
-        return self._galilBoard.GCommand(cmd)
+        with self.g_lock:
+            return self._galilBoard.GCommand(cmd)
 
     def connect(self):
         """Connects to the GalilBoard with the ipAdress from ConfigFile"""
@@ -238,6 +241,17 @@ class GalilRobot:
         print("\033[93m" +
               "Warning in connect(): joint constraints and collision detection are hard coded." +
               " \033[0m")
+
+   
+    # Thread-safe setter
+    def set_ismoving(self, value: bool):
+        with self.g_lock:
+            self.ismoving = value
+
+    # Thread-safe getter
+    def get_flag(self) -> bool:
+        with self.g_lock:
+            return self.ismoving
 
     def disconnect(self):
         """Disconnects from GalilBoard"""
@@ -491,6 +505,7 @@ class GalilRobot:
 
     def jointPTPDirectMotion(self, axisRelativeDistances, diff_direction=False):
         try:
+            self.set_ismoving(True)
             viaPoint = axisRelativeDistances
             viaPointTicks = [0] * self._numActuator
 
@@ -518,7 +533,9 @@ class GalilRobot:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
         # because of the exception and PEP 8.0 guideline
-        return None
+        finally:
+            self.set_ismoving(True)
+            return None
 
     def jointPTPLinearMotion(self, axisRelativeDistances, sKurve=False, sKurveValue=1):  #S
         """
@@ -531,38 +548,43 @@ class GalilRobot:
         :param sKurveValue:
         :return:
         """
+        try:
+            self.set_ismoving(True)
+            self._send_cmd('LM ' + self._numActuatorStr)
+            self._send_cmd('CS S')  # Clear Sequence on coordinate S
 
-        self._send_cmd('LM ' + self._numActuatorStr)
-        self._send_cmd('CS S')  # Clear Sequence on coordinate S
+            for viaPointIdx in range(len(axisRelativeDistances)):
+                viaPoint = axisRelativeDistances[viaPointIdx]
+                viaPointTicks = [0] * self._numActuator
+                for idx in range(self._numActuator):
+                    # viaPointTicks is sorted alphabetically (Galil-Channel via self._numActuatorStr[idx])
+                    viaPointTicks[idx] = viaPoint[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value] * \
+                                        self._listUnitToTick[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value]
+                    viaPointTicks[idx] = np.round(viaPointTicks[idx])
 
-        for viaPointIdx in range(len(axisRelativeDistances)):
-            viaPoint = axisRelativeDistances[viaPointIdx]
-            viaPointTicks = [0] * self._numActuator
-            for idx in range(self._numActuator):
-                # viaPointTicks is sorted alphabetically (Galil-Channel via self._numActuatorStr[idx])
-                viaPointTicks[idx] = viaPoint[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value] * \
-                                     self._listUnitToTick[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value]
-                viaPointTicks[idx] = np.round(viaPointTicks[idx])
+                if not all(v == 0 for v in viaPointTicks):
+                    self._send_cmd('LI ' + ','.join(map(str, viaPointTicks)))
 
-            if not all(v == 0 for v in viaPointTicks):
-                self._send_cmd('LI ' + ','.join(map(str, viaPointTicks)))
+            self._send_cmd('LE')
+            self._send_cmd('VA ' + ','.join(map(str, self._listMaxAcc)))
+            self._send_cmd('VD ' + ','.join(map(str, self._listMaxDec)))
+            self._send_cmd('VS ' + ','.join(map(str, self._listMaxSpeed)))
+            self._send_cmd('BGS')  # Begin Motion in coordinate S
+            if sKurve:
+                self._send_cmd('IT ' + str(sKurveValue))
 
-        self._send_cmd('LE')
-        self._send_cmd('VA ' + ','.join(map(str, self._listMaxAcc)))
-        self._send_cmd('VD ' + ','.join(map(str, self._listMaxDec)))
-        self._send_cmd('VS ' + ','.join(map(str, self._listMaxSpeed)))
-        self._send_cmd('BGS')  # Begin Motion in coordinate S
-        if sKurve:
-            self._send_cmd('IT ' + str(sKurveValue))
+            # GMotionComplete instead of self._send_cmd('AM') which is not supported
+            # self._galilBoard.GMotionComplete(self._numActuatorStr)
+            self._galilBoard.GMotionComplete('S')
+            self.updateJointPositions()
 
-        # GMotionComplete instead of self._send_cmd('AM') which is not supported
-        # self._galilBoard.GMotionComplete(self._numActuatorStr)
-        self._galilBoard.GMotionComplete('S')
-
-        self.updateJointPositions()
-
-        # because of the exception and PEP 8.0 guideline
-        return None
+        except Exception as e:
+            print("Error in JointMotion with exception: ", e)
+        finally:
+            # because of the exception and PEP 8.0 guideline
+            self.set_ismoving(False)
+            return None
+  
 
     def jointPTPLinearMotionSinglePoint(self, axisRelativeDistances, sKurve=False, sKurveValue=0.5):  #S
         """
@@ -576,43 +598,47 @@ class GalilRobot:
         :return:
         """
         # t = time.time()
+        try:
+            self.set_ismoving(True)
+            self._send_cmd('ST')
+            # self._send_cmd('CS S')  # Clear Sequence on coordinate S
+            self._send_cmd('LM ' + self._numActuatorStr)
 
-        self._send_cmd('ST')
-        # self._send_cmd('CS S')  # Clear Sequence on coordinate S
-        self._send_cmd('LM ' + self._numActuatorStr)
+            viaPoint = axisRelativeDistances
+            viaPointTicks = [0] * self._numActuator
+            for idx in range(self._numActuator):
+                # viaPointTicks is sorted alphabetically (Galil-Channel via self._numActuatorStr[idx])
+                viaPointTicks[idx] = viaPoint[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value] * \
+                                    self._listUnitToTick[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value]
+                viaPointTicks[idx] = np.round(viaPointTicks[idx])
 
-        viaPoint = axisRelativeDistances
-        viaPointTicks = [0] * self._numActuator
-        for idx in range(self._numActuator):
-            # viaPointTicks is sorted alphabetically (Galil-Channel via self._numActuatorStr[idx])
-            viaPointTicks[idx] = viaPoint[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value] * \
-                                 self._listUnitToTick[self._dictChanToRobotAxisID[self._numActuatorStr[idx]].value]
-            viaPointTicks[idx] = np.round(viaPointTicks[idx])
+            if not all(v == 0 for v in viaPointTicks):
+                self._send_cmd('LI ' + ','.join(map(str, viaPointTicks)))
 
-        if not all(v == 0 for v in viaPointTicks):
-            self._send_cmd('LI ' + ','.join(map(str, viaPointTicks)))
+            self._send_cmd('LE')
+            self._send_cmd('VA ' + ','.join(map(str, self._listMaxAcc)))
+            self._send_cmd('VD ' + ','.join(map(str, self._listMaxDec)))
+            self._send_cmd('VS ' + ','.join(map(str, self._listMaxSpeed)))
+            #self._send_cmd('BG ' + self._numActuatorStr)
+            #self._send_cmd('AM ' + self._numActuatorStr)
+            self._send_cmd('BGS')  # Begin Motion in coordinate S
+            if sKurve:
+                self._send_cmd('IT ' + str(sKurveValue))
 
-        self._send_cmd('LE')
-        self._send_cmd('VA ' + ','.join(map(str, self._listMaxAcc)))
-        self._send_cmd('VD ' + ','.join(map(str, self._listMaxDec)))
-        self._send_cmd('VS ' + ','.join(map(str, self._listMaxSpeed)))
-        #self._send_cmd('BG ' + self._numActuatorStr)
-        #self._send_cmd('AM ' + self._numActuatorStr)
-        self._send_cmd('BGS')  # Begin Motion in coordinate S
-        if sKurve:
-            self._send_cmd('IT ' + str(sKurveValue))
+            # tf = time.time() - t + 1e-5
+            # print("Time for Galil to Send Command: " + str(tf) + " " + str(1/tf) + " Hz")
 
-        # tf = time.time() - t + 1e-5
-        # print("Time for Galil to Send Command: " + str(tf) + " " + str(1/tf) + " Hz")
-
-        # GMotionComplete instead of self._send_cmd('AM') which is not supported
-        # self._galilBoard.GMotionComplete(self._numActuatorStr)
-        
-        self._galilBoard.GMotionComplete('S')
-        self.updateJointPositions()
-
-        # because of the exception and PEP 8.0 guideline
-        return None
+            # GMotionComplete instead of self._send_cmd('AM') which is not supported
+            # self._galilBoard.GMotionComplete(self._numActuatorStr)
+            
+            self._galilBoard.GMotionComplete('S')
+            self.updateJointPositions()
+        except Exception as e:
+            print("Error in JointPTPLinearMotion with exception: ", e)
+        finally:
+            # because of the exception and PEP 8.0 guideline
+            self.set_ismoving(False)
+            return None
 
     def updateJointPositions(self):
         self._send_cmd('PF 10.4')
@@ -663,3 +689,15 @@ class GalilRobot:
 
     def differentialJoint(self):
         pass
+    
+    def isRobotMoving(self):
+        return False
+        # for axis in self._numActuatorStr:
+        #     t = time.time()
+        #     response = self._send_cmd(f"MG _BG{axis}")
+        #     dt = time.time()-t
+        #     print(dt, 1/dt)
+        #     status = int(float(response.strip()))
+        #     if status & 1:  # Bit 0 = 1 → moving
+        #         return True
+        # return False
