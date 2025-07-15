@@ -176,7 +176,7 @@ if __name__=="__main__":
 
     PORT = 8190
     increment = 0.5 # mm
-    rot_increment = 1  #Deg
+    rot_increment = 3  #Deg
     rate = 10  # Hz
     repeat = 0.0
 

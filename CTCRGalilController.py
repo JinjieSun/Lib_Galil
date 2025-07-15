@@ -13,8 +13,8 @@ import queue
 # DEFAULT VALUES
 TUBE_OFFSETS = np.array([0, 10, 0, 0, 0, 0])
 TUBE_LENGTH = [129, 72, 42]
-TUBE_INITAL_POSITION = np.array([0, 70, 0, 40, 0, 30])
-
+# TUBE_INITAL_POSITION = np.array([np.deg2rad(-180), 70, np.deg2rad(180), 40, 0, 30])
+TUBE_INITAL_POSITION = np.array([np.deg2rad(-180), 20, np.deg2rad(180), 20, 0, 10])
 ###############################################################################
 # Helper Function
 ###############################################################################
@@ -185,8 +185,6 @@ class SocketListenerThread(threading.Thread):
                                 break
                             delta_q, action = DecodeMessage(data)
                             with self.stack_lock:
-                                # print("Action Recerive: " + action)
-                                # print("delta q: " + str(delta_q))
                                 self.cmd_stack.append((action, delta_q))
                                 if len(self.cmd_stack) > self.cmd_stack_size:
                                     _ = self.cmd_stack.pop(0)
@@ -230,6 +228,7 @@ class RobotWorkerThread(threading.Thread):
         while self.running:
             with self.stack_lock:
                 (action, q_delta) = self.cmd_stack.pop() if self.cmd_stack else (None, [0.] * 6) 
+              
             if action == "spos":
                 result = self.send_movement_command(q_delta)
             elif action == "home":
@@ -268,6 +267,7 @@ class RobotWorkerThread(threading.Thread):
         #     self.rob.jointPTPLinearMotionSinglePoint(q_delta, sKurve=True, sKurveValue=0.004)
         # else:
         # self.rob.jointPTPLinearMotionSinglePoint(q_delta, sKurve=True, sKurveValue=0.004)
+        print(q_delta)
         self.rob.jointPTPDirectMotion(q_delta, diff_direction)
         self.prev_q_delta = q_delta
         t_end = time.time() - ts
@@ -290,7 +290,8 @@ class RobotWorkerThread(threading.Thread):
         print("Homing Finished")
         self.q_cur = self.rob.getJointPositions()
         self.q_init = self.q_cur
-        # self.cmd_stack = []
+        # if len(self.cmd_stack) > 0:
+        #     self.cmd_stack = []
         return True
     
     def error_compensation(self):

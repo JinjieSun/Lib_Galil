@@ -90,8 +90,8 @@ def rotate_vector_x(vec, angle_rad):
     """Rotate a 3D vector around X-axis by a given angle in radians."""
     R_x = np.array([
         [1, 0, 0],
-        [0, np.cos(-angle_rad), -np.sin(-angle_rad)],
-        [0, np.sin(-angle_rad),  np.cos(-angle_rad)]
+        [0, np.cos(angle_rad), -np.sin(angle_rad)],
+        [0, np.sin(angle_rad),  np.cos(angle_rad)]
     ])
     return R_x @ vec
 

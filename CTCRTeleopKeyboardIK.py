@@ -57,7 +57,10 @@ class PublishTransformThread(threading.Thread):
         self.rot_increment = rot_increment
         self.action = action
         self.dq = np.zeros(6,)
-        if (action == "spos"):
+        if np.all(self.linear_velocity == 0) and np.all(self.angular_velocity == 0):
+            self.dq = np.zeros(6,)
+            self.galil_dq = np.zeros(6,)
+        elif (action == "spos"):
             self.dq = self.ctcrController.get_delta_joints(self.linear_velocity, self.angular_velocity)
             self.encode_to_galil()
         # Notify publish thread that we have a new message.
@@ -103,12 +106,13 @@ class PublishTransformThread(threading.Thread):
             self.condition.acquire()
             # Wait for a new message or timeout.
             self.condition.wait(self.timeout)
-            
+            # if np.all(self.galil_dq == 0):
+            #     continue
             msg = f"{self.action} " + " ".join(str(x) for x in self.galil_dq)
             self.condition.release()
             try:
                 self.client_socket.sendall(msg.encode('utf-8'))
-                # print(f"Sent: {msg}")
+                print(f"Sent: {msg}")
                 data = self.client_socket.recv(1024)
                 msg = data.decode()
                 # print("Received: ", msg)
@@ -169,7 +173,7 @@ if __name__=="__main__":
     beta_m = [-0.060, -0.032, -0.010]  # meters
     
     ctcrKinematics = CTCRKinematics(dll_path, xml_path)
-    ctcrController = CTCRController(alpha_rad, beta_m, ctcrKinematics, robot_length)
+    ctcrController = CTCRController(alpha_rad, beta_m, ctcrKinematics, robot_length, robot_angle_rad=np.deg2rad(220))
 
     pub_tf_thread = PublishTransformThread(repeat, ctcrController, PORT=PORT)
 
