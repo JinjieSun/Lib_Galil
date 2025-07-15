@@ -210,6 +210,7 @@ class CTCRController:
         
         results = self.robotKinematics.forward_kinematics(self.alpha, self.beta)   
         body_jacob = results['jacobian_body']
+        spatial_jacob = results['jacobian_spatial']
         # Compute IK delta joints for the current pose error
         delta_joints = inverse_kinematics_dls(
             self.movement, body_jacob, self.beta,
@@ -260,7 +261,7 @@ if __name__ == "__main__":
     # visualizer = CTCRVisualizer(get_backbone_fn=robot_controller.get_back_bone)
     # visualizer.show()
     ee_pose = []
-    for i in range(100):
+    for i in range(50):
         # if i < 30:
         #     dp = [0.0000, 0.000, 0.0005]
         # elif i < 60:
@@ -271,11 +272,15 @@ if __name__ == "__main__":
         #     dp= [0, -0.0005, 0]
         dp = [0.0000, 0.000, 0.0005]
         dq = robot_controller.get_delta_joints(dp, [0, 0, 0])
-        print(f"-------------- Iter {i} ------------------")
-        print(dq)
+        # print(f"-------------- Iter {i} ------------------")
+        # print(dq)
         robot_controller.apply_delta_joints(dq)
         ee = robot_controller.get_back_bone()[-1].copy()
         ee_pose.append(ee)
     ee_pose = np.array(ee_pose)
+    ee_move = np.diff(ee_pose, axis=0, )
+    avg_err = np.average(ee_move - dp, axis=0)
+    print(np.average(ee_move, axis=0))
+    print("error:" + str(avg_err))
     visualize_eef_movement(ee_pose)
     
