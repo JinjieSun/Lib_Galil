@@ -13,8 +13,10 @@ import queue
 # DEFAULT VALUES
 TUBE_OFFSETS = np.array([0, 10, 0, 0, 0, 0])
 TUBE_LENGTH = [129, 72, 42]
-# TUBE_INITAL_POSITION = np.array([np.deg2rad(-180), 70, np.deg2rad(180), 40, 0, 30])
-TUBE_INITAL_POSITION = np.array([np.deg2rad(-180), 20, np.deg2rad(180), 20, 0, 10])
+TUBE_INITAL_POSITION = np.array([0, 85, 0, 40, 0, 30])
+# TUBE_INITAL_POSITION = np.array([0, 95, 0, 40, 0, 30])
+# TUBE_INITAL_POSITION = np.array([0, 0, 0, 0, 0, 0])
+# TUBE_INITAL_POSITION = np.array([np.deg2rad(-180), 20, np.deg2rad(180), 20, 0, 10])
 ###############################################################################
 # Helper Function
 ###############################################################################
