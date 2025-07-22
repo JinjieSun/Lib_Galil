@@ -13,7 +13,7 @@ import queue
 # DEFAULT VALUES
 TUBE_OFFSETS = np.array([0, 10, 0, 0, 0, 0])
 TUBE_LENGTH = [129, 72, 42]
-TUBE_INITAL_POSITION = np.array([0, 85, 0, 40, 0, 30])
+TUBE_INITAL_POSITION = np.array([0, 77, 0, 46, 0, 24])
 # TUBE_INITAL_POSITION = np.array([0, 95, 0, 40, 0, 30])
 # TUBE_INITAL_POSITION = np.array([0, 0, 0, 0, 0, 0])
 # TUBE_INITAL_POSITION = np.array([np.deg2rad(-180), 20, np.deg2rad(180), 20, 0, 10])
@@ -340,7 +340,7 @@ if __name__ == '__main__':
 
     ROB = InitRobot()
     # in ms?
-    # ROB._galilBoard.GTimeout(30)
+    ROB._galilBoard.GTimeout(10)
     
     q = queue.Queue(maxsize=100)   
     joint_stack  = []    

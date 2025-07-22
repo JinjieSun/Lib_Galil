@@ -505,6 +505,8 @@ class GalilRobot:
 
     def jointPTPDirectMotion(self, axisRelativeDistances, diff_direction=False):
         try:
+            if self.get_flag():
+                print("Robot is During Movement")
             self.set_ismoving(True)
             viaPoint = axisRelativeDistances
             viaPointTicks = [0] * self._numActuator

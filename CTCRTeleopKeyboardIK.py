@@ -153,9 +153,9 @@ CTRL-C to quit
 if __name__=="__main__":
 
     PORT = 8190
-    increment = 0.0005 # m
+    increment = 0.0003 # m
     rot_increment = 0.05  #Rad
-    rate = 10  # Hz
+    rate = 20  # Hz
     repeat = 0.0
 
     print("linear velocity: ", increment, "m")
@@ -173,7 +173,7 @@ if __name__=="__main__":
     beta_m = [-0.060, -0.032, -0.010]  # meters
     
     ctcrKinematics = CTCRKinematics(dll_path, xml_path)
-    ctcrController = CTCRController(alpha_rad, beta_m, ctcrKinematics, robot_length, robot_angle_rad=np.deg2rad(-36))
+    ctcrController = CTCRController(alpha_rad, beta_m, ctcrKinematics, robot_length, robot_angle_rad=np.deg2rad(-26))
 
     pub_tf_thread = PublishTransformThread(repeat, ctcrController, PORT=PORT)
 
