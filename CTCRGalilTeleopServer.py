@@ -13,8 +13,8 @@ import queue
 # DEFAULT VALUES
 TUBE_OFFSETS = np.array([0, 10, 0, 0, 0, 0])
 TUBE_LENGTH = [129, 72, 42]
-TUBE_INITAL_POSITION = np.array([0, 77, 0, 46, 0, 24])
-# TUBE_INITAL_POSITION = np.array([0, 95, 0, 40, 0, 30])
+# TUBE_INITAL_POSITION = np.array([0, 77, 0, 46, 0, 24])
+TUBE_INITAL_POSITION = np.array([0, 95, 0, 40, 0, 30])
 # TUBE_INITAL_POSITION = np.array([0, 0, 0, 0, 0, 0])
 # TUBE_INITAL_POSITION = np.array([np.deg2rad(-180), 20, np.deg2rad(180), 20, 0, 10])
 ###############################################################################
@@ -195,8 +195,6 @@ class SocketListenerThread(threading.Thread):
                                 if q_cur is not None:
                                     msg = ' '.join([str(num) for num in q_cur])
                                     conn.sendall(msg.encode("utf-8"))
-
-
                 except Exception as e:
                     print(f"[Server] Socket exception: {e}")
                     time.sleep(1)

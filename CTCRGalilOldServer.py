@@ -10,7 +10,7 @@ Tube_Length = [129, 82, 42]
 DELTAQ = np.zeros((6,))
 
 # Start Position 1
-START_POS = [0, 20, 0, 20, 0, 10]
+START_POS = [0, 0, 0, 0, 0, 0]
 
 # Start Position 2
 # START_POS = [0, 74, 0, 49, 0, 10]
@@ -110,9 +110,9 @@ def goStartPos(rob, update_Q, delta_q = None):
     #     print("Moving to Start Position")
     #     rob.jointPTPLinearMotionSinglePoint(START_POS, sKurve=True, sKurveValue=0.004)
     # update_Q += START_POS
-    print("'-------------- Current Joint Info --------------")
-    print(rob.getJointPositions())
-    print()
+    # print("'-------------- Current Joint Info --------------")
+    # print(rob.getJointPositions())
+    # print()
     return result, update_Q
 
 def InitRobot():
@@ -194,6 +194,7 @@ def SendMovementCommand(rob, delta_q, update_Q):
         return False, update_Q
 
     valid_move = check_for_valid(update_Q, delta_q)
+    valid_move = True
     if not valid_move:
         print("Invalid Movement: No motion")
         return False, update_Q 

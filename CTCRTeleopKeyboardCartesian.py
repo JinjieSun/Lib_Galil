@@ -7,8 +7,6 @@ import time
 import numpy as np
 from CTCRController import CTCRController
 from CTCRKinematics import CTCRKinematics
-
-
 class PublishTransformThread(threading.Thread):
     def __init__(self, rate, ctcrController, HOST = '127.0.0.1' , PORT = 8190):
         super(PublishTransformThread, self).__init__()
@@ -23,6 +21,8 @@ class PublishTransformThread(threading.Thread):
         self.done = False
         self.ctcrController = ctcrController
         self.action = "gpos"
+        self.dq = np.zeros(6,)
+        self.galil_dq = np.zeros(6,)
         # Set timeout to None if rate is 0 (causes new_message to wait forever
         # for new data to publish)
         if rate != 0.0:
@@ -78,6 +78,8 @@ class PublishTransformThread(threading.Thread):
 
         if len(tokens) != 6:
             print("Invalid message length. Expected 6 values.")
+
+            print(tokens)
             return None, None
         try:
             values = list(map(float, tokens))
@@ -109,13 +111,13 @@ class PublishTransformThread(threading.Thread):
             # if np.all(self.galil_dq == 0):
             #     continue
             msg = f"{self.action} " + " ".join(str(x) for x in self.galil_dq)
+            print(msg)
             self.condition.release()
             try:
                 self.client_socket.sendall(msg.encode('utf-8'))
                 print(f"Sent: {msg}")
                 data = self.client_socket.recv(1024)
                 msg = data.decode()
-                # print("Received: ", msg)
                 alpha_galil, beta_galil = self.parse_joint_message(msg)
                 beta = self.ctcrController.convert_from_galil_to_beta(beta_galil)
                 self.ctcrController.update_robot_joint(alpha_galil, beta)
@@ -123,8 +125,6 @@ class PublishTransformThread(threading.Thread):
                 # print("cur beta: " + str(self.ctcrController.beta))
             except Exception as e:
                 print(f"Error sending data: {e}")
-
-
             
 msg = """
 Reading from the keyboard and Publishing to Pose!
@@ -153,7 +153,7 @@ CTRL-C to quit
 if __name__=="__main__":
 
     PORT = 8190
-    increment = 0.0003 # m
+    increment = 0.0005 # m
     rot_increment = 0.05  #Rad
     rate = 20  # Hz
     repeat = 0.0
@@ -170,10 +170,10 @@ if __name__=="__main__":
     
     robot_length = [139*1e-3, 72*1e-3, 42*1e-3]
     alpha_rad = [0.0, 0.0, 0.0]   # degrees
-    beta_m = [-0.060, -0.032, -0.010]  # meters
+    beta_m = [-0.062, -0.026, -0.018]  # meters
     
     ctcrKinematics = CTCRKinematics(dll_path, xml_path)
-    ctcrController = CTCRController(alpha_rad, beta_m, ctcrKinematics, robot_length, robot_angle_rad=np.deg2rad(-26))
+    ctcrController = CTCRController(alpha_rad, beta_m, ctcrKinematics, robot_length, robot_angle_rad=np.deg2rad(-35))
 
     pub_tf_thread = PublishTransformThread(repeat, ctcrController, PORT=PORT)
 
@@ -196,8 +196,7 @@ if __name__=="__main__":
             keys = pygame.key.get_pressed()
 
             # Linear
-            is_shift = keys[pygame.K_LSHIFT]
-            
+            is_shift = keys[pygame.K_LSHIFT] 
             x = y = z = 0
             rot_x = rot_y = rot_z = 0
 
@@ -207,35 +206,30 @@ if __name__=="__main__":
                     rot_z = 1
                 else:
                     z = 1
-
             if keys[pygame.K_s]:
                 action = "spos"
                 if is_shift:
                     rot_z = -1
                 else:
                     z = -1
-
             if keys[pygame.K_a]:
                 action = "spos"
                 if is_shift:
                     rot_x = 1
                 else:
                     x = 1
-
             if keys[pygame.K_d]:
                 action = "spos"
                 if is_shift:
                     rot_x = -1
                 else:
                     x = -1
-
             if keys[pygame.K_q]:
                 action = "spos"
                 if is_shift:
                     rot_y = 1
                 else:
                     y = 1
-
             if keys[pygame.K_e]:
                 action = "spos"
                 if is_shift:
@@ -245,8 +239,7 @@ if __name__=="__main__":
             # Get position
             
             if keys[pygame.K_p]:
-                action = "gpos"
-            
+                action = "gpos"           
             if keys[pygame.K_h]:
                 action = "home"
             

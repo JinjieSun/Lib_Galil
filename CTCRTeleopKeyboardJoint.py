@@ -5,73 +5,6 @@ import pygame
 import sys
 import time
 
-class PublishTransformThread(threading.Thread):
-    def __init__(self, rate):
-        super(PublishTransformThread, self).__init__()
-        # 
-        
-        self.x = 0.0
-        self.y = 0.0
-        self.z = 0.0
-        self.th = 0.0
-        self.increment = 0.0
-        self.rot_increment = 0.0
-        self.condition = threading.Condition()
-        self.done = False
-
-        # Set timeout to None if rate is 0 (causes new_message to wait forever
-        # for new data to publish)
-        if rate != 0.0:
-            self.timeout = 1.0 / rate
-        else:
-            self.timeout = None
-
-        self.start()
-
-    def update(self, b1, b2, b3, a1, a2, a3, increment, rot_increment):
-        self.condition.acquire()
-        self.b1 = b1
-        self.b2 = b2
-        self.b3 = b3
-        self.a1 = a1
-        self.a2 = a2
-        self.a3 = a3
-
-        self.increment = increment
-        self.rot_increment = rot_increment
-        # Notify publish thread that we have a new message.
-        self.condition.notify()
-        self.condition.release()
-
-    def stop(self):
-        self.condition.acquire()
-        self.condition.notify()
-        self.condition.release()
-
-        self.done = True
-        self.join()
-
-    def run(self):
-        while not self.done:
-            self.condition.acquire()
-            # Wait for a new message or timeout.
-            self.condition.wait(self.timeout)
-
-            # Copy state into twist message.
-
-            self.linear_b1 = self.b1 * self.increment
-            self.linear_b2 = self.b2 * self.increment
-            self.linear_b3 = self.b3 * self.increment
-            self.angular_a1 = self.a1 * self.rot_increment
-            self.angular_a2 = self.a2 * self.rot_increment
-            self.angular_a3 = self.a3 * self.rot_increment
-            
-
-            self.condition.release()
-
-            # Publish.
-            self.publisher.publish(msg)
-
 class PublishJointStateThread(threading.Thread):
     def __init__(self, rate, HOST = '127.0.0.1', PORT = 5880):
         super(PublishJointStateThread, self).__init__()
@@ -148,8 +81,6 @@ class PublishJointStateThread(threading.Thread):
             except Exception as e:
                 print(f"Error sending data: {e}")
             
-
-
 msg = """
 Reading from the keyboard  and Publishing to Twist!
 ---------------------------
@@ -183,9 +114,6 @@ if __name__=="__main__":
     print("velocity: ", increment, "mm")
     print("rate: ", rate, "Hz")
     print("speed if you hold down keys: ", increment * rate, " mm/s")
-
-    # pub_tf_thread = PublishTransformThread(repeat)
-    
     pub_js_thread = PublishJointStateThread(repeat, PORT=PORT)
 
     pygame.init()
